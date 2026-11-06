@@ -1,5 +1,7 @@
 @startuml
-' Full domain model as the team drew it: the target after CR-1 (Human vs. AI).
+' Full domain model as the team drew it: the target after CR-1 (Human vs. PC).
+' The original diagram calls the computer player AI; the experiment calls it PC, because it is a fixed
+' algorithm and not an AI model.
 ' Not given to Bob. Used to compare each branch's code with the domain model, and for the talk.
 title Tic-Tac-Toe — domain model (target after CR-1)
 hide empty members
@@ -9,7 +11,7 @@ class Board
 class Round
 class Player
 class Human
-class AI
+class PC
 class Goal
 class "Win: Row\ncolumn\nDiagonal\nInv Diagonal" as Win
 class Put
@@ -27,7 +29,7 @@ TicTacToe *-- "2" Player
 Round -> "2" Player
 Player --> Board
 Player <|-- Human
-Player <|-- AI
+Player <|-- PC
 Player o-- Goal
 Player o-- Color
 Goal <|-- Win

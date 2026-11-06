@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Usage: new-run.sh <without-ddd|with-ddd> <run-number>
-# Clones ONE branch with ONE commit, no tags and no remote, into a folder with a
-# neutral name, so Bob can see neither the other branch, nor any history, nor which
-# condition it is in. Tags the starting point as p0.
+# Clones the starting point of a branch (tag start/<branch>): one commit, no tags and no
+# remote, renamed to main, in a folder with a neutral name. Bob can see neither the other
+# branch, nor any history, nor which condition it is in. Tags the starting point as p0.
 set -euo pipefail
 source "$(dirname "$0")/config.sh"
 
@@ -14,6 +14,8 @@ RUN_ID="$BRANCH-r$N"
 fail() { echo "ERROR: $*" >&2; exit 1; }
 
 [[ -e "$RESULTS_DIR/$RUN_ID/run.txt" ]] && fail "$RUN_ID already exists in $RESULTS_DIR"
+git ls-remote --exit-code "$REPO_URL" "refs/tags/start/$BRANCH" >/dev/null 2>&1 ||
+  fail "tag start/$BRANCH is not in $REPO_URL: run setup-branches.sh and push the branches and tags it prints"
 
 # Bob loads global rules and AGENTS.md files from parent folders: none may exist.
 [[ -f "$HOME/.bob/AGENTS.md" ]] && fail "$HOME/.bob/AGENTS.md exists; global context would leak into the run"
@@ -33,19 +35,22 @@ done
 RUN_DIR="$RUNS_ABS/ttt-$(printf '%04x%04x' $RANDOM $RANDOM)"
 [[ -e "$RUN_DIR" ]] && fail "$RUN_DIR already exists, try again"
 
-git clone --quiet --single-branch --branch "$BRANCH" --depth 1 --no-tags "$REPO_URL" "$RUN_DIR"
+git -c advice.detachedHead=false clone --quiet --single-branch --branch "start/$BRANCH" --depth 1 --no-tags \
+  "$REPO_URL" "$RUN_DIR"
 git -C "$RUN_DIR" remote remove origin
-git -C "$RUN_DIR" branch -m main
+git -C "$RUN_DIR" tag -d "start/$BRANCH" >/dev/null
+git -C "$RUN_DIR" checkout -q -b main
 git -C "$RUN_DIR" config user.name "experimenter"
 git -C "$RUN_DIR" config user.email "experimenter@example.invalid"
 git -C "$RUN_DIR" tag p0
 
-# What Bob will be able to see: one branch called main, one commit, no remote.
+# What Bob will be able to see: one branch called main, one commit, no remote, only the tag p0.
 [[ "$(git -C "$RUN_DIR" branch -a | wc -l | tr -d ' ')" == "1" ]] || fail "unexpected branches in $RUN_DIR"
 [[ "$(git -C "$RUN_DIR" rev-list --count HEAD)" == "1" ]] || fail "unexpected history in $RUN_DIR"
 [[ -z "$(git -C "$RUN_DIR" remote)" ]] || fail "remote still configured in $RUN_DIR"
+[[ "$(git -C "$RUN_DIR" tag)" == "p0" ]] || fail "unexpected tags in $RUN_DIR"
 
 mkdir -p "$RESULTS_DIR/$RUN_ID"
-printf 'run_id=%s\nbranch=%s\nrun_dir=%s\ncreated=%s\n' \
-  "$RUN_ID" "$BRANCH" "$RUN_DIR" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RESULTS_DIR/$RUN_ID/run.txt"
+printf 'run_id=%s\nbranch=%s\nrun_dir=%s\nmode=%s\ncreated=%s\n' \
+  "$RUN_ID" "$BRANCH" "$RUN_DIR" "${RUN_MODE:-runs}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > "$RESULTS_DIR/$RUN_ID/run.txt"
 echo "$RUN_ID -> $RUN_DIR"

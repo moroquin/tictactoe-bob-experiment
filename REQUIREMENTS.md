@@ -37,6 +37,6 @@ Example of the end of a game:
 
 ## Out of scope for version 1
 
-- Playing against the computer.
+- Playing against the PC (a player controlled by the program).
 - Other board sizes or other rule variants.
 - Saving games, and graphical or web interfaces.

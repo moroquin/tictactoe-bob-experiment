@@ -6,6 +6,9 @@ Subcommands
   design      unit tests, coverage, mutation score, CK, jdeps and (optionally) SonarQube
   acceptance  only the acceptance tests (handy for the pilot)
   audit       only the isolation audit of a Bob stream-json log
+  history-report  the history of one phase: harness numbers plus Bob's own account
+  results-doc     the RESULTS.md that publish-run.sh puts in the branch: results and history of every phase
+  live        a one-line-per-action view of a Bob stream-json log, read from stdin
   collect     merge results/<run>/F<n>*.json into results/summary.csv and print medians
 
 Environment
@@ -26,8 +29,10 @@ import re
 import shlex
 import statistics
 import subprocess
+import sys
 import tempfile
 import time
+from datetime import datetime
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -389,7 +394,7 @@ def ocp(run_dir, from_ref, to_ref):
 # ------------------------------------------------------------ vocabulary
 
 DISCARDED = ["cell", "tile", "grid", "matrix", "mark", "token", "symbol", "stone", "spot", "turn", "tie",
-             "victory", "position", "user", "participant", "computer", "bot", "cpu"]
+             "victory", "position", "user", "participant", "computer", "bot", "cpu", "ai"]
 MODEL_TERMS = ["board", "square", "coordinate", "piece", "color", "player", "round", "put", "goal", "win", "draw"]
 JAVA_KEYWORDS = set("""abstract assert boolean break byte case catch char class const continue default do double else
 enum extends final finally float for goto if implements import instanceof int interface long native new package private
@@ -412,7 +417,7 @@ def norm(word):
 
 def vocab(run_dir, phase):
     discarded = DISCARDED + (["move"] if phase < 3 else [])
-    terms = MODEL_TERMS + (["human", "ai"] if phase >= 2 else []) + (["move"] if phase >= 3 else [])
+    terms = MODEL_TERMS + (["human", "pc"] if phase >= 2 else []) + (["move"] if phase >= 3 else [])
     counts = {w: 0 for w in discarded}
     seen = set()
     io_files = 0
@@ -576,12 +581,247 @@ def design(run_dir, run_id, phase):
     return res
 
 
+# ------------------------------------------------------- session history
+
+HISTORY_TYPES = ["ambiguity", "gap", "design", "naming", "scope", "deviation", "workaround"]
+PHASE_TITLES = {1: "Build version 1", 2: "CR-1, Human vs. PC", 3: "CR-2, three Pieces each"}
+
+
+def md_section(text, title):
+    """Body of the '## title' section, up to the next '## ' heading."""
+    m = re.search(rf"^##\s+{re.escape(title)}\s*$(.*?)(?=^##\s|\Z)", text, re.M | re.S | re.I)
+    return m.group(1) if m else ""
+
+
+def table_rows(body, prefix):
+    rows = []
+    for line in body.splitlines():
+        if not line.strip().startswith("|"):
+            continue
+        cells = [c.strip() for c in line.strip().strip("|").split("|")]
+        if cells and re.fullmatch(rf"{prefix}\d+", cells[0].strip("`* ")):
+            rows.append(cells)
+    return rows
+
+
+def parse_history(path, where=""):
+    res = {"history_found": False, "history_where": where or ""}
+    p = Path(path) if path else None
+    if p is None or not p.exists() or not p.read_text(encoding="utf-8", errors="replace").strip():
+        return res
+    text = p.read_text(encoding="utf-8", errors="replace")
+    res["history_found"] = True
+    res["history_path_ok"] = where == "history/session.md"
+    m = re.search(r"\b(partially done|done|blocked)\b", md_section(text, "Result"), re.I)
+    res["history_result"] = m.group(1).lower() if m else "unknown"
+    decisions = table_rows(md_section(text, "Decisions I made on my own"), "A")
+    res["history_decisions"] = len(decisions)
+    for t in HISTORY_TYPES:
+        res[f"history_decisions_{t}"] = sum(1 for r in decisions if len(r) > 1 and r[1].strip("`* ").lower() == t)
+    res["history_decisions_other"] = res["history_decisions"] - sum(res[f"history_decisions_{t}"] for t in HISTORY_TYPES)
+    res["history_pending"] = len(table_rows(md_section(text, "Pending"), "P"))
+    res["history_docs_relied"] = sum(1 for line in md_section(text, "Documentation I relied on").splitlines()
+                                     if re.match(r"\s*([-*]|\d+\.)\s+\S", line))
+    timing = md_section(text, "Timing")
+    for key, label in (("history_bob_start", "Start"), ("history_bob_end", "End")):
+        m = re.search(rf"{label}:\s*`?(\d{{4}}-\d\d-\d\dT\d\d:\d\d:\d\dZ)", timing)
+        res[key] = m.group(1) if m else ""
+    return res
+
+
+def wall_clock(started, ended):
+    res = {"started_at": started or "", "ended_at": ended or ""}
+    try:
+        fmt = "%Y-%m-%dT%H:%M:%SZ"
+        res["wall_seconds"] = int((datetime.strptime(ended, fmt) - datetime.strptime(started, fmt)).total_seconds())
+    except (TypeError, ValueError):
+        res["wall_seconds"] = None
+    return res
+
+
+def _num(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _int(v):
+    n = _num(v)
+    return "—" if n is None else f"{int(n):,}"
+
+
+def _val(v, suffix=""):
+    return "—" if v in (None, "") else f"{v}{suffix}"
+
+
+def _duration(data):
+    ms = _num(data.get("bob_duration_ms"))
+    seconds = int(ms / 1000) if ms is not None else data.get("wall_seconds")
+    return "—" if seconds is None else f"{seconds // 60} min {seconds % 60:02d} s"
+
+
+def _phase_data(out_dir, phase):
+    data = {}
+    for name in (f"F{phase}.json", f"F{phase}-design.json"):
+        f = Path(out_dir) / name
+        if f.exists():
+            data.update(json.loads(f.read_text(encoding="utf-8")))
+    return data
+
+
+def _demote_headings(text, levels=1):
+    lines, fenced = [], False
+    for line in text.splitlines():
+        if line.lstrip().startswith("```"):
+            fenced = not fenced
+        lines.append("#" * levels + line if line.startswith("#") and not fenced else line)
+    return "\n".join(lines)
+
+
+def history_report(out_dir, run_id, phase):
+    out_dir = Path(out_dir)
+    d = _phase_data(out_dir, phase)
+    raw = out_dir / "history" / f"F{phase}.bob.md"
+    bob_text = raw.read_text(encoding="utf-8", errors="replace").strip() if raw.exists() else ""
+    rows = [
+        ("Started → ended (UTC), measured by the harness", f"{_val(d.get('started_at'))} → {_val(d.get('ended_at'))}"),
+        ("Duration of the Bob session", _duration(d)),
+        ("Tokens: total · input · output · cache read",
+         " · ".join(_int(d.get(k)) for k in ("bob_total_tokens", "bob_input_tokens", "bob_output_tokens",
+                                             "bob_cache_read_tokens"))),
+        ("Cost (Bobcoins)", _val(d.get("bob_session_costs"))),
+        ("Tool calls · reads before the first edit", f"{_val(d.get('tool_uses'))} · {_val(d.get('reads_before_first_edit'))}"),
+        ("Builds · failed builds", f"{_val(d.get('builds'))} · {_val(d.get('builds_failed'))}"),
+        ("Acceptance tests passed", f"{_val(d.get('acceptance_passed'))} of {_val(d.get('acceptance_total'))}"),
+        ("Classes added · classes modified · Open/Closed ratio",
+         f"{_val(d.get('main_added'))} · {_val(d.get('main_modified'))} · {_val(d.get('ocp_ratio'))}"),
+        ("Lines changed in existing classes · existing tests touched",
+         f"{_val(d.get('churn_existing_main'))} · {_val(d.get('existing_tests_touched'))}"),
+        ("Decisions Bob made on its own · pending items",
+         f"{_val(d.get('history_decisions'))} · {_val(d.get('history_pending'))}"),
+        ("Discarded terms in the code · files with console I/O",
+         f"{_val(d.get('discarded_terms'))} · {_val(d.get('io_classes'))}"),
+        ("Line coverage · mutation score", f"{_val(d.get('line_coverage'), '%')} · {_val(d.get('mutation_score'), '%')}"),
+        ("CBO median · LCOM* median", f"{_val(d.get('ck_cbo_median'))} · {_val(d.get('ck_lcom_star_median'))}"),
+        ("Isolation violations", _val(d.get("audit_violations"))),
+    ]
+    parts = [f"# {run_id} · F{phase} · {PHASE_TITLES.get(phase, '')}", "",
+             "Numbers measured by the harness from Bob's own stats and the repository. Bob's account of the session follows.",
+             "", "| Measure | Value |", "|---|---|"]
+    parts += [f"| {k} | {v} |" for k, v in rows]
+    parts += ["", "---", ""]
+    if not bob_text:
+        parts.append("_Bob did not write `history/session.md` in this session._")
+    else:
+        if d.get("history_where") and d.get("history_where") != "history/session.md":
+            parts += [f"_Bob wrote this history at `{d['history_where']}` instead of `history/session.md`._", ""]
+        parts.append(_demote_headings(bob_text))
+    target = out_dir / "history" / f"F{phase}.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("\n".join(parts) + "\n", encoding="utf-8")
+    return target
+
+
+RESULT_ROWS = [
+    ("Started (UTC)", lambda d: _val(d.get("started_at"))),
+    ("Duration of the Bob session", _duration),
+    ("Tokens, total", lambda d: _int(d.get("bob_total_tokens"))),
+    ("Tokens: input · output · cache read",
+     lambda d: " · ".join(_int(d.get(k)) for k in ("bob_input_tokens", "bob_output_tokens", "bob_cache_read_tokens"))),
+    ("Cost (Bobcoins)", lambda d: _val(d.get("bob_session_costs"))),
+    ("Tool calls", lambda d: _val(d.get("tool_uses"))),
+    ("Reads before the first edit", lambda d: _val(d.get("reads_before_first_edit"))),
+    ("Builds · failed builds", lambda d: f"{_val(d.get('builds'))} · {_val(d.get('builds_failed'))}"),
+    ("Acceptance tests passed", lambda d: f"{_val(d.get('acceptance_passed'))} of {_val(d.get('acceptance_total'))}"),
+    ("Decisions Bob made on its own", lambda d: _val(d.get("history_decisions"))),
+    ("Pending items", lambda d: _val(d.get("history_pending"))),
+    ("Classes added · modified", lambda d: f"{_val(d.get('main_added'))} · {_val(d.get('main_modified'))}"),
+    ("Open/Closed ratio", lambda d: _val(d.get("ocp_ratio"))),
+    ("Lines changed in existing classes", lambda d: _val(d.get("churn_existing_main"))),
+    ("Existing tests touched", lambda d: _val(d.get("existing_tests_touched"))),
+    ("Discarded terms in the code", lambda d: _val(d.get("discarded_terms"))),
+    ("Files with console I/O", lambda d: _val(d.get("io_classes"))),
+    ("Line coverage · mutation score",
+     lambda d: f"{_val(d.get('line_coverage'), '%')} · {_val(d.get('mutation_score'), '%')}"),
+    ("CBO median · LCOM* median", lambda d: f"{_val(d.get('ck_cbo_median'))} · {_val(d.get('ck_lcom_star_median'))}"),
+    ("Isolation violations", lambda d: _val(d.get("audit_violations"))),
+]
+
+
+def results_document(out_dir, run_id):
+    """RESULTS.md for the branch: one table with every phase, then Bob's account of each session."""
+    out_dir = Path(out_dir)
+    meta = {}
+    if (out_dir / "run.txt").exists():
+        meta = dict(l.split("=", 1) for l in (out_dir / "run.txt").read_text().splitlines() if "=" in l)
+    branch = meta.get("branch", "?")
+    phases = [ph for ph in (1, 2, 3) if _phase_data(out_dir, ph)]
+    data = {ph: _phase_data(out_dir, ph) for ph in phases}
+    lines = [
+        f"# Results and history: {branch}", "",
+        f"IBM Bob wrote the Tic-Tac-Toe in this branch, one phase per session (run `{run_id}`). Every session was "
+        f"new, without memory of the previous ones, and started from `REQUIREMENTS.md`"
+        + (" and the DDD documentation in `docs/domain/`." if branch == "with-ddd" else "."),
+        "The table was measured by the experiment's harness. Each phase's account below was written by Bob "
+        "at the end of its session, following `.bob/rules/02-history.md`.", "",
+        "## Play this version", "",
+        "```bash",
+        "mvn -q package",
+        "java -jar target/tictactoe.jar                  # two people",
+        "java -jar target/tictactoe.jar --vs-pc          # against the PC (after CR-1)",
+        "java -jar target/tictactoe.jar --three-pieces   # three Pieces each (after CR-2)",
+        "```", "",
+        "## Results", "",
+        "| | " + " | ".join(f"F{ph} · {PHASE_TITLES.get(ph, '')}" for ph in phases) + " |",
+        "|---|" + "---|" * len(phases),
+    ]
+    for label, fn in RESULT_ROWS:
+        lines.append(f"| {label} | " + " | ".join(fn(data[ph]) for ph in phases) + " |")
+    for ph in phases:
+        lines += ["", f"## F{ph} · {PHASE_TITLES.get(ph, '')}: Bob's account", ""]
+        raw = out_dir / "history" / f"F{ph}.bob.md"
+        text = raw.read_text(encoding="utf-8", errors="replace").strip() if raw.exists() else ""
+        where = data[ph].get("history_where")
+        if not text:
+            lines.append("_Bob did not write `history/session.md` in this session._")
+            continue
+        if where and where != "history/session.md":
+            lines += [f"_Bob wrote this history at `{where}` instead of `history/session.md`._", ""]
+        lines.append(_demote_headings(text, levels=2))
+    return "\n".join(lines) + "\n"
+
+
+def live(prefix):
+    """Prints one line per Bob action while a stream-json log is being written."""
+    for raw in sys.stdin:
+        raw = raw.strip()
+        if not raw.startswith("{"):
+            continue
+        try:
+            ev = json.loads(raw)
+        except json.JSONDecodeError:
+            continue
+        kind = ev_type(ev)
+        if kind == "tool_use":
+            params = tool_params(ev)
+            what = command_of(params) or next(iter(paths_of(params)), "")
+            print(f"{prefix} {tool_name(ev)} {what[:110]}", flush=True)
+        elif kind == "error":
+            print(f"{prefix} error: {str(ev.get('message') or ev.get('error') or ev)[:200]}", flush=True)
+        elif kind == "result":
+            stats = ev.get("stats") or {}
+            print(f"{prefix} finished: {ev.get('status')}, {stats.get('total_tokens')} tokens, "
+                  f"{stats.get('session_costs')} Bobcoins", flush=True)
+
+
 # --------------------------------------------------------------- collect
 
 KEY_METRICS = ["bob_total_tokens", "bob_session_costs", "bob_duration_ms", "tool_uses",
                "tool_uses_before_first_edit", "builds_failed", "acceptance_passed", "acceptance_total",
                "main_modified", "ocp_ratio", "churn_existing_main", "existing_tests_touched",
-               "discarded_terms", "io_classes", "ck_cbo_median", "ck_lcom_star_median", "mutation_score"]
+               "discarded_terms", "io_classes", "history_decisions", "history_pending",
+               "ck_cbo_median", "ck_lcom_star_median", "mutation_score"]
 
 
 def collect(results_dir, quiet=False):
@@ -651,6 +891,10 @@ def main():
     p.add_argument("--scenarios", required=True)
     p.add_argument("--bob-exit", type=int, default=None)
     p.add_argument("--skip-build", action="store_true")
+    p.add_argument("--history", default="", help="the history Bob wrote in this session")
+    p.add_argument("--history-where", default="", help="where Bob wrote it, relative to the run folder")
+    p.add_argument("--started", default="", help="UTC start of the session, YYYY-MM-DDTHH:MM:SSZ")
+    p.add_argument("--ended", default="", help="UTC end of the session, YYYY-MM-DDTHH:MM:SSZ")
     p.add_argument("--out", required=True)
 
     d = sub.add_parser("design")
@@ -669,6 +913,19 @@ def main():
     u.add_argument("--log", required=True)
     u.add_argument("--run-dir", required=True)
 
+    h = sub.add_parser("history-report")
+    h.add_argument("--results-run", required=True, help="results/<run-id>")
+    h.add_argument("--run-id", required=True)
+    h.add_argument("--phase", type=int, required=True)
+
+    i = sub.add_parser("results-doc")
+    i.add_argument("--results-run", required=True, help="results/<run-id>")
+    i.add_argument("--run-id", required=True)
+    i.add_argument("--out", required=True)
+
+    v = sub.add_parser("live")
+    v.add_argument("--prefix", default="")
+
     c = sub.add_parser("collect")
     c.add_argument("--results", required=True)
     c.add_argument("--quiet", action="store_true", help="only write summary.csv")
@@ -681,10 +938,15 @@ def main():
         res.update(acceptance(args.run_dir, args.phase, args.scenarios, args.skip_build))
         res.update(ocp(args.run_dir, f"p{args.phase - 1}", f"p{args.phase}"))
         res.update(vocab(args.run_dir, args.phase))
+        res.update(parse_history(args.history, args.history_where))
+        res.update(wall_clock(args.started, args.ended))
         write_json(args.out, res)
         print(f"[{args.run_id} F{args.phase}] tokens={res.get('bob_total_tokens')} cost={res.get('bob_session_costs')} "
               f"acceptance={res['acceptance_passed']}/{res['acceptance_total']} "
-              f"ocp_ratio={res['ocp_ratio']} discarded_terms={res['discarded_terms']}")
+              f"ocp_ratio={res['ocp_ratio']} discarded_terms={res['discarded_terms']} "
+              f"decisions={res.get('history_decisions', '—')} pending={res.get('history_pending', '—')}")
+        if not res["history_found"]:
+            print("NOTE: Bob did not write history/session.md in this session.")
         if res["audit_violations"]:
             print(f"WARNING: {res['audit_violations']} isolation violations — discard this run. "
                   f"See audit_details in {args.out}")
@@ -697,6 +959,13 @@ def main():
         print(json.dumps(res, indent=2))
     elif args.cmd == "audit":
         print(json.dumps(audit(args.log, args.run_dir), indent=2))
+    elif args.cmd == "history-report":
+        print(history_report(args.results_run, args.run_id, args.phase))
+    elif args.cmd == "results-doc":
+        Path(args.out).write_text(results_document(args.results_run, args.run_id), encoding="utf-8")
+        print(args.out)
+    elif args.cmd == "live":
+        live(args.prefix)
     elif args.cmd == "collect":
         collect(args.results, args.quiet)
 

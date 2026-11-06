@@ -1,10 +1,10 @@
-Change request CR-1: Human vs. AI
+Change request CR-1: Human vs. PC
 
-Add a new kind of Player, the AI: a Player controlled by the program. The existing Players become Human Players.
+Add a new kind of Player, the PC: a Player that the program controls. The existing Players become Human Players.
 
-- Start: `java -jar target/tictactoe.jar --vs-ai`. Without arguments, the game must keep working exactly as before, with two Human Players.
-- With `--vs-ai`, the Human Player plays X and starts. The AI plays O and puts automatically, without reading input.
-- The AI is deterministic: no randomness, no external services and no language models. In its round it chooses the target Square with these rules, in this order:
+- Start: `java -jar target/tictactoe.jar --vs-pc`. Without arguments, the game must keep working exactly as before, with two Human Players.
+- With `--vs-pc`, the Human Player plays X and starts. The PC plays O and puts automatically, without reading input.
+- The PC is deterministic and simple: no randomness, no artificial intelligence, no language models and no external services. In its round it chooses the target Square with these fixed rules, in this order:
   1. Win: if it can complete three in a line with one put, it puts there.
   2. Block: otherwise, if X could complete three in a line with its next put, it puts on that Square.
   3. Center: otherwise, if (2,2) is empty, it puts there.

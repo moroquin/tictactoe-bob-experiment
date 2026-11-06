@@ -22,3 +22,9 @@ BOB_EXTRA_FLAGS="${BOB_EXTRA_FLAGS:-}"
 
 # Set RUN_DESIGN_METRICS=0 to skip coverage, mutation testing, CK, jdeps and SonarQube.
 RUN_DESIGN_METRICS="${RUN_DESIGN_METRICS:-1}"
+
+# LIVE=1 prints one line per Bob action while a phase runs; LIVE=0 keeps the terminal quiet.
+LIVE="${LIVE:-1}"
+
+# Where play.sh downloads and builds each version of the game.
+PLAY_DIR="${PLAY_DIR:-$HOME/ttt-play}"
