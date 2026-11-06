@@ -1,0 +1,15 @@
+{
+  "approval": {
+    "allowed_permissions": ["read", "edit", "execute", "todo"],
+    "permissionOptions": [
+      { "groupId": "read", "enableOutsideWorkspace": false }
+    ],
+    "allowedExecutors": [
+      {
+        "toolId": "execute_command",
+        "approvedCommands": ["mvn", "java", "ls", "cat"],
+        "deniedCommands": ["git", "curl", "wget", "env", "printenv"]
+      }
+    ]
+  }
+}

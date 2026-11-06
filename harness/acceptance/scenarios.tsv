@@ -1,0 +1,19 @@
+# Acceptance scenarios. Columns (tab-separated): id, since phase, arguments (- = none), inputs (| = new line),
+# expected final board (/ = new row), expected result line, expected number of lines starting with 'Invalid', description.
+# Expected values were computed with a reference model of the rules in REQUIREMENTS.md and the change requests.
+F1-01	1	-	1 1|2 1|1 2|2 2|1 3	XXX/OO./...	X wins	0	X wins on row 1
+F1-02	1	-	1 1|1 2|3 3|2 2|2 1|3 2	XO./XO./.OX	O wins	0	O wins on column 2
+F1-03	1	-	1 1|1 2|2 2|1 3|3 3	XOO/.X./..X	X wins	0	X wins on the diagonal
+F1-04	1	-	1 1|1 3|2 1|2 2|3 2|3 1	X.O/XO./OX.	O wins	0	O wins on the inverse diagonal
+F1-05	1	-	1 3|1 1|2 3|2 2|3 3	O.X/.OX/..X	X wins	0	X wins on column 3
+F1-06	1	-	1 1|2 2|3 3|1 3|3 1|2 1|2 3|3 2|1 2	XXO/OOX/XOX	Draw	0	Draw
+F1-07	1	-	1 1|1 1|4 1|a b|2 1|1 2|2 2|1 3	XXX/OO./...	X wins	3	Occupied, out of range and garbage are rejected; X wins
+F1-08	1	-	1 2|1 3|2 3|3 2|3 3|3 1|2 2|1 1|2 1	OXO/XXX/OOX	X wins	0	Win on the 9th put beats Draw
+F1-09	1	-	2 2|2|1 1|1 2 3|0 3|3 3|1 3|3 1|3 2|1 2|2 1|2 3	OXO/OXX/XOX	Draw	3	Wrong amount of numbers and zero are rejected
+F2-01	2	--vs-ai	1 1|3 3|2 1	X.O/XO./O.X	O wins	0	AI takes center, a corner, then wins
+F2-02	2	--vs-ai	1 1|3 3|3 1|3 2	X.O/OO./XXX	X wins	0	Human wins with a fork
+F2-03	2	--vs-ai	1 1|2 2|1 2|3 1|2 3|3 2	XXO/OOX/XXO	Draw	1	Square taken by the AI is rejected; Draw
+F3-01	3	--three-pieces	1 1|2 1|1 2|2 2|1 3	XXX/OO./...	X wins	0	Win while putting the third piece
+F3-02	3	--three-pieces	1 1|2 1|1 2|2 2|3 3|3 1|3 3 1 3	XXX/OO./O..	X wins	0	X wins by moving a piece
+F3-03	3	--three-pieces	1 1|2 1|1 2|2 2|3 3|3 1|2 1 1 3|1 1 2 2|1 3|3 3 1 3	XXX/OO./O..	X wins	3	Invalid moves are rejected; X wins
+F3-04	3	--three-pieces	1 1|2 1|1 2|2 2|3 2|1 3|3 2 3 3|1 3 2 3	XX./OOO/..X	O wins	0	O wins by moving a piece
