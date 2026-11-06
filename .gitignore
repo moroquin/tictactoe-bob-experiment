@@ -1,6 +1,4 @@
-target/
-*.class
-.idea/
-*.iml
-.vscode/
+.env
+*.local
 .DS_Store
+harness/results/.summary.*.csv
