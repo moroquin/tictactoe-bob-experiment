@@ -1,1 +1,0 @@
-Lo mismo + los docs dirigen el desarrollo: AGENTS.md con flujo, mapa de archivos y decisiones en el registro
