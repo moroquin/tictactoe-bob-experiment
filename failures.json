@@ -1,0 +1,29 @@
+[
+  {
+    "type": "domain",
+    "verdict": "Missing domain context",
+    "title": "The PC blocks the wrong square (F2-02)",
+    "what": "Without DDD, the PC blocks (3,2) instead of (2,1), the first square in reading order. It failed in 2 of 3 executions; with DDD, 0 of 3.",
+    "cause": "Without DDD, Bob read “reading order” as the order of the lines, not of the squares, and decided it alone. With DDD, the glossary defines Reading order as the order of Coordinate.all().",
+    "lesson": "An ambiguous term becomes a decision by the agent. One line of the glossary removes it.",
+    "note": "Round 0, without DDD, decision A3: 'does not define whether reading order applies per-line or per-square'. Run 2, without DDD, decision A4: 'Lines are enumerated in a fixed order… This naturally produces reading-order output'."
+  },
+  {
+    "type": "agent",
+    "verdict": "Agent variation",
+    "title": "Board glued to the prompt",
+    "what": "In run 2, without DDD fails every hidden game (0/9 and 0/12), although the logic is correct (9/9 and 11/12).",
+    "cause": "It prints the prompt without a line break, and the first row of the board ends up glued to it. REQUIREMENTS.md is the same in both folders: it is not attributed to the domain.",
+    "lesson": "The tests the agent writes did not detect it. Accuracy is measured outside the agent.",
+    "note": "Bob declared in its history that the jar met the console contract."
+  },
+  {
+    "type": "documentation",
+    "verdict": "Effect of our documentation",
+    "title": "With DDD modified REQUIREMENTS.md",
+    "what": "In F2, with DDD edited the client's contract to include the mode against the PC (round 0 and run 2).",
+    "cause": "The rule “docs and code in agreement” does not tell the team's docs from the client's contract. Bob justified it with that rule (decision A6).",
+    "lesson": "Rules also drive the agent towards what we do not want. You have to say which documents are never touched.",
+    "note": "Fix for the next execution: AGENTS.md must say that REQUIREMENTS.md is the client's contract and is never edited."
+  }
+]

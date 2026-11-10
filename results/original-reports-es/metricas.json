@@ -1,0 +1,1476 @@
+{
+  "without-ddd": {
+    "F1": {
+      "verify": "ok",
+      "tests": 28,
+      "tests_fallidos": 0,
+      "aceptacion": "0/9",
+      "aceptacion_fallos": [
+        "F1-01",
+        "F1-02",
+        "F1-03",
+        "F1-04",
+        "F1-05",
+        "F1-06",
+        "F1-07",
+        "F1-08",
+        "F1-09"
+      ],
+      "aceptacion_logica": "9/9",
+      "aceptacion_F1": "0/9",
+      "clases": 3,
+      "paquetes": 1,
+      "Ce_mediana": 1,
+      "Ce_max": 2,
+      "Ca_max": 2,
+      "LCOM*_mediana": 0.42,
+      "clases_LCOM4>1": 0,
+      "clases_con_IO": [
+        "Main"
+      ],
+      "dependencias_entre_paquetes": {},
+      "ciclos_entre_paquetes": [],
+      "por_clase": [
+        {
+          "clase": "Board",
+          "Ce": 0,
+          "Ca": 2,
+          "I": 0.0,
+          "metodos": 7,
+          "campos": 1,
+          "LCOM*": 0.5,
+          "LCOM4": 1
+        },
+        {
+          "clase": "Game",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 3,
+          "campos": 3,
+          "LCOM*": 0.33,
+          "LCOM4": 1
+        },
+        {
+          "clase": "Main",
+          "Ce": 2,
+          "Ca": 0,
+          "I": 1.0,
+          "metodos": 2,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        }
+      ],
+      "campos_privados": "4/4",
+      "campos_privados_pct": 100,
+      "metodos_publicos_pct": 100,
+      "mutadores_publicos": [
+        "Board.place",
+        "Game.tryMove"
+      ],
+      "fugas_de_estado": [
+        "Game.board() devuelve Board"
+      ],
+      "mutantes": "65/82",
+      "mutation_score": 79,
+      "mutation_score_sin_io": 96,
+      "mutantes_sin_io": "65/68",
+      "mutantes_por_clase": {
+        "Board": "45/46",
+        "Game": "20/22",
+        "Main": "0/14"
+      },
+      "loc_main": 113,
+      "loc_test": 201,
+      "ce": "1 · 2",
+      "historial": "history/session-1.md",
+      "duracion_s": 183,
+      "decisiones": 3,
+      "dec_ambiguity": 0,
+      "dec_gap": 2,
+      "dec_design": 1,
+      "dec_naming": 0,
+      "dec_scope": 0,
+      "dec_deviation": 0,
+      "dec_workaround": 0,
+      "preguntas": [
+        "Should game logic live in one class or be split?",
+        "REQUIREMENTS.md says \"any other output … is allowed before the final board\" — what to print as prompts?",
+        "What should happen if stdin ends before the game is over (e.g. in a script that supplies too few moves)?"
+      ],
+      "preguntas_tipo": [
+        [
+          "design",
+          "Should game logic live in one class or be split?"
+        ],
+        [
+          "gap",
+          "REQUIREMENTS.md says \"any other output … is allowed before the final board\" — what to print as prompts?"
+        ],
+        [
+          "gap",
+          "What should happen if stdin ends before the game is over (e.g. in a script that supplies too few moves)?"
+        ]
+      ],
+      "pendientes": 0,
+      "resultado": "Done — all tests pass, `mvn -q verify` exits with no output (success), and the j",
+      "docs_usados": 3,
+      "terminos_descartados": 3,
+      "descartados_en_codigo": {
+        "Status": [
+          "Status",
+          "status"
+        ],
+        "move": [
+          "tryMove"
+        ],
+        "place": [
+          "place"
+        ]
+      },
+      "terminos_modelo": "6/17",
+      "terminos_modelo_faltantes": [
+        "Color",
+        "Column",
+        "Coordinate",
+        "Diagonal",
+        "InverseDiagonal",
+        "Put",
+        "Round",
+        "Square",
+        "State",
+        "TicTacToe",
+        "Win"
+      ],
+      "foto_reconstruida": true,
+      "bob_sesiones": 1,
+      "costo_bob": 1.06,
+      "contexto_max_k": 25.4,
+      "duracion_bob_s": 183,
+      "llamadas_modelo": 27,
+      "builds_mvn": 1,
+      "lecturas_docs": 1,
+      "lecturas_codigo": 0,
+      "lecturas_tests": 0,
+      "docs_leidos_antes_de_editar": 1,
+      "codigo_leido_antes_de_editar": 0,
+      "primera_edicion": "codigo",
+      "ediciones_docs": 0,
+      "ediciones_codigo": 4,
+      "docs_antes_que_codigo": false,
+      "costo_bobcoins": 1.06,
+      "contexto_k": 25.4,
+      "fuente_costo": "bob.db",
+      "lecturas": "1 · 0 · 0",
+      "antes_de_editar": "1 · 0"
+    },
+    "F2": {
+      "verify": "ok",
+      "tests": 40,
+      "tests_fallidos": 0,
+      "aceptacion": "0/12",
+      "aceptacion_fallos": [
+        "F1-01",
+        "F1-02",
+        "F1-03",
+        "F1-04",
+        "F1-05",
+        "F1-06",
+        "F1-07",
+        "F1-08",
+        "F1-09",
+        "F2-01",
+        "F2-02",
+        "F2-03"
+      ],
+      "aceptacion_logica": "11/12",
+      "aceptacion_F1": "0/9",
+      "aceptacion_F2": "0/3",
+      "clases": 4,
+      "paquetes": 1,
+      "Ce_mediana": 1.0,
+      "Ce_max": 3,
+      "Ca_max": 3,
+      "LCOM*_mediana": 0.5,
+      "clases_LCOM4>1": 1,
+      "clases_con_IO": [
+        "Main"
+      ],
+      "dependencias_entre_paquetes": {},
+      "ciclos_entre_paquetes": [],
+      "por_clase": [
+        {
+          "clase": "Board",
+          "Ce": 0,
+          "Ca": 3,
+          "I": 0.0,
+          "metodos": 7,
+          "campos": 1,
+          "LCOM*": 0.5,
+          "LCOM4": 1
+        },
+        {
+          "clase": "Game",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 3,
+          "campos": 3,
+          "LCOM*": 0.33,
+          "LCOM4": 1
+        },
+        {
+          "clase": "Main",
+          "Ce": 3,
+          "Ca": 0,
+          "I": 1.0,
+          "metodos": 2,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "PcPlayer",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 3,
+          "campos": 2,
+          "LCOM*": 0.75,
+          "LCOM4": 2
+        }
+      ],
+      "campos_privados": "4/4",
+      "campos_privados_pct": 100,
+      "metodos_publicos_pct": 93,
+      "mutadores_publicos": [
+        "Board.place",
+        "Game.tryMove"
+      ],
+      "fugas_de_estado": [
+        "Game.board() devuelve Board"
+      ],
+      "mutantes": "85/110",
+      "mutation_score": 77,
+      "mutation_score_sin_io": 94,
+      "mutantes_sin_io": "85/90",
+      "mutantes_por_clase": {
+        "Board": "45/46",
+        "Game": "20/22",
+        "Main": "0/20",
+        "PcPlayer": "20/22"
+      },
+      "loc_main": 168,
+      "loc_test": 310,
+      "ce": "1.0 · 3",
+      "historial": "history/session-2.md",
+      "duracion_s": 175,
+      "contexto_k": 35.4,
+      "ventana_k": 270.0,
+      "contexto_pct": 13,
+      "costo_bobcoins": 1.58,
+      "decisiones": 4,
+      "dec_ambiguity": 0,
+      "dec_gap": 1,
+      "dec_design": 3,
+      "dec_naming": 0,
+      "dec_scope": 0,
+      "dec_deviation": 0,
+      "dec_workaround": 0,
+      "preguntas": [
+        "Where should the PC move-selection logic live?",
+        "Should the Human player be extracted to its own class?",
+        "Which piece does the PC play in `--vs-pc` mode?",
+        "How to implement reading-order tie-break for rules 1 and 2?"
+      ],
+      "preguntas_tipo": [
+        [
+          "design",
+          "Where should the PC move-selection logic live?"
+        ],
+        [
+          "design",
+          "Should the Human player be extracted to its own class?"
+        ],
+        [
+          "gap",
+          "Which piece does the PC play in `--vs-pc` mode?"
+        ],
+        [
+          "design",
+          "How to implement reading-order tie-break for rules 1 and 2?"
+        ]
+      ],
+      "pendientes": 0,
+      "resultado": "done — `mvn -q verify` passes with all 40 tests (28 original + 12 new PcPlayer t",
+      "docs_usados": 3,
+      "terminos_descartados": 4,
+      "descartados_en_codigo": {
+        "Cell": [
+          "cell"
+        ],
+        "Status": [
+          "Status",
+          "status"
+        ],
+        "move": [
+          "chooseMove",
+          "findWinningMove",
+          "move",
+          "tryMove"
+        ],
+        "place": [
+          "place"
+        ]
+      },
+      "terminos_modelo": "9/19",
+      "terminos_modelo_faltantes": [
+        "Color",
+        "Column",
+        "Coordinate",
+        "Diagonal",
+        "HumanPlayer",
+        "InverseDiagonal",
+        "Put",
+        "Round",
+        "Square",
+        "TicTacToe"
+      ],
+      "foto_reconstruida": false,
+      "bob_sesiones": 1,
+      "costo_bob": 1.58,
+      "contexto_max_k": 35.4,
+      "duracion_bob_s": 175,
+      "llamadas_modelo": 29,
+      "builds_mvn": 3,
+      "lecturas_docs": 1,
+      "lecturas_codigo": 4,
+      "lecturas_tests": 2,
+      "docs_leidos_antes_de_editar": 1,
+      "codigo_leido_antes_de_editar": 4,
+      "primera_edicion": "codigo",
+      "ediciones_docs": 0,
+      "ediciones_codigo": 5,
+      "docs_antes_que_codigo": false,
+      "fuente_costo": "bob.db",
+      "lecturas": "1 · 4 · 2",
+      "antes_de_editar": "1 · 4",
+      "clases_nuevas": 1,
+      "clases_modificadas": 1,
+      "clases_borradas": 0,
+      "ocp_ratio": 0.5,
+      "lineas_cambiadas_en_existentes": 20,
+      "tests_existentes_tocados": 0,
+      "detalle_nuevas": [
+        "tictactoe/PcPlayer.java"
+      ],
+      "detalle_modificadas": [
+        "tictactoe/Main.java"
+      ],
+      "detalle_tests_tocados": [],
+      "ocp": "1 / 1 / 0",
+      "requirements_modificado": false
+    },
+    "F3": {
+      "verify": "ok",
+      "tests": 60,
+      "tests_fallidos": 0,
+      "aceptacion": "0/16",
+      "aceptacion_fallos": [
+        "F1-01",
+        "F1-02",
+        "F1-03",
+        "F1-04",
+        "F1-05",
+        "F1-06",
+        "F1-07",
+        "F1-08",
+        "F1-09",
+        "F2-01",
+        "F2-02",
+        "F2-03",
+        "F3-01",
+        "F3-02",
+        "F3-03",
+        "F3-04"
+      ],
+      "aceptacion_logica": "15/16",
+      "aceptacion_F1": "0/9",
+      "aceptacion_F2": "0/3",
+      "aceptacion_F3": "0/4",
+      "clases": 5,
+      "paquetes": 1,
+      "Ce_mediana": 1,
+      "Ce_max": 4,
+      "Ca_max": 4,
+      "LCOM*_mediana": 0.58,
+      "clases_LCOM4>1": 1,
+      "clases_con_IO": [
+        "Main"
+      ],
+      "dependencias_entre_paquetes": {},
+      "ciclos_entre_paquetes": [],
+      "por_clase": [
+        {
+          "clase": "Board",
+          "Ce": 0,
+          "Ca": 4,
+          "I": 0.0,
+          "metodos": 7,
+          "campos": 1,
+          "LCOM*": 0.5,
+          "LCOM4": 1
+        },
+        {
+          "clase": "Game",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 3,
+          "campos": 3,
+          "LCOM*": 0.33,
+          "LCOM4": 1
+        },
+        {
+          "clase": "Main",
+          "Ce": 4,
+          "Ca": 0,
+          "I": 1.0,
+          "metodos": 4,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "PcPlayer",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 3,
+          "campos": 2,
+          "LCOM*": 0.75,
+          "LCOM4": 2
+        },
+        {
+          "clase": "ThreePiecesGame",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 7,
+          "campos": 5,
+          "LCOM*": 0.67,
+          "LCOM4": 1
+        }
+      ],
+      "campos_privados": "8/8",
+      "campos_privados_pct": 100,
+      "metodos_publicos_pct": 80,
+      "mutadores_publicos": [
+        "Board.place",
+        "Game.tryMove",
+        "ThreePiecesGame.tryPut"
+      ],
+      "fugas_de_estado": [
+        "Game.board() devuelve Board",
+        "ThreePiecesGame.board() devuelve Board"
+      ],
+      "mutantes": "138/195",
+      "mutation_score": 71,
+      "mutation_score_sin_io": 93,
+      "mutantes_sin_io": "138/149",
+      "mutantes_por_clase": {
+        "Board": "45/46",
+        "Game": "20/22",
+        "Main": "0/46",
+        "PcPlayer": "20/22",
+        "ThreePiecesGame": "53/59"
+      },
+      "loc_main": 279,
+      "loc_test": 459,
+      "ce": "1 · 4",
+      "historial": "history/session-1.md",
+      "duracion_s": 110,
+      "decisiones": 4,
+      "dec_ambiguity": 0,
+      "dec_gap": 2,
+      "dec_design": 2,
+      "dec_naming": 0,
+      "dec_scope": 0,
+      "dec_deviation": 0,
+      "dec_workaround": 0,
+      "preguntas": [
+        "Should `ThreePiecesGame` extend or wrap `Game`, or be a standalone class?",
+        "Should the three-pieces game loop live in `Main.java` or a separate class?",
+        "What should `isPutPhase()` report when both players are in different phases (e.g. X placed 3, O placed 2)?",
+        "The CR says a line with the wrong number of tokens is \"also invalid\" — should the put-phase check for 4 tokens (a move command) be rejected with \"Invalid\"?"
+      ],
+      "preguntas_tipo": [
+        [
+          "design",
+          "Should `ThreePiecesGame` extend or wrap `Game`, or be a standalone class?"
+        ],
+        [
+          "design",
+          "Should the three-pieces game loop live in `Main.java` or a separate class?"
+        ],
+        [
+          "gap",
+          "What should `isPutPhase()` report when both players are in different phases (e.g. X placed 3, O placed 2)?"
+        ],
+        [
+          "gap",
+          "The CR says a line with the wrong number of tokens is \"also invalid\" — should the put-phase check for 4 tokens (a move command) be rejected with \"Invalid\"?"
+        ]
+      ],
+      "pendientes": 0,
+      "resultado": "Done. `mvn -q verify` passes with 60 tests (0 failures).",
+      "docs_usados": 3,
+      "terminos_descartados": 5,
+      "descartados_en_codigo": {
+        "Cell": [
+          "cell"
+        ],
+        "Index": [
+          "playerIndex"
+        ],
+        "Phase": [
+          "isPutPhase"
+        ],
+        "Status": [
+          "Status",
+          "status",
+          "updateStatusOrSwitch"
+        ],
+        "place": [
+          "place"
+        ]
+      },
+      "terminos_modelo": "11/21",
+      "terminos_modelo_faltantes": [
+        "Color",
+        "Column",
+        "Coordinate",
+        "Diagonal",
+        "HumanPlayer",
+        "InverseDiagonal",
+        "PiecesRemaining",
+        "Round",
+        "Square",
+        "TicTacToe"
+      ],
+      "foto_reconstruida": false,
+      "bob_sesiones": 1,
+      "costo_bob": 1.0,
+      "contexto_max_k": 34.4,
+      "duracion_bob_s": 110,
+      "llamadas_modelo": 18,
+      "builds_mvn": 2,
+      "lecturas_docs": 1,
+      "lecturas_codigo": 3,
+      "lecturas_tests": 2,
+      "docs_leidos_antes_de_editar": 1,
+      "codigo_leido_antes_de_editar": 5,
+      "primera_edicion": "codigo",
+      "ediciones_docs": 0,
+      "ediciones_codigo": 3,
+      "docs_antes_que_codigo": false,
+      "costo_bobcoins": 1.0,
+      "contexto_k": 34.4,
+      "fuente_costo": "bob.db",
+      "lecturas": "1 · 3 · 2",
+      "antes_de_editar": "1 · 5",
+      "clases_nuevas": 1,
+      "clases_modificadas": 1,
+      "clases_borradas": 0,
+      "ocp_ratio": 0.5,
+      "lineas_cambiadas_en_existentes": 90,
+      "tests_existentes_tocados": 0,
+      "detalle_nuevas": [
+        "tictactoe/ThreePiecesGame.java"
+      ],
+      "detalle_modificadas": [
+        "tictactoe/Main.java"
+      ],
+      "detalle_tests_tocados": [],
+      "ocp": "1 / 1 / 0",
+      "requirements_modificado": false
+    }
+  },
+  "with-ddd": {
+    "F1": {
+      "verify": "ok",
+      "tests": 54,
+      "tests_fallidos": 0,
+      "aceptacion": "9/9",
+      "aceptacion_fallos": [],
+      "aceptacion_logica": "9/9",
+      "aceptacion_F1": "9/9",
+      "clases": 12,
+      "paquetes": 3,
+      "Ce_mediana": 1.0,
+      "Ce_max": 7,
+      "Ca_max": 7,
+      "LCOM*_mediana": 0.5,
+      "clases_LCOM4>1": 5,
+      "clases_con_IO": [
+        "Main",
+        "console.ConsoleGame"
+      ],
+      "dependencias_entre_paquetes": {
+        "(raíz)": [
+          "tictactoe.console",
+          "tictactoe.domain"
+        ],
+        "tictactoe.console": [
+          "tictactoe.domain"
+        ]
+      },
+      "ciclos_entre_paquetes": [],
+      "por_clase": [
+        {
+          "clase": "Main",
+          "Ce": 4,
+          "Ca": 0,
+          "I": 1.0,
+          "metodos": 2,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "console.ConsoleGame",
+          "Ce": 4,
+          "Ca": 1,
+          "I": 0.8,
+          "metodos": 5,
+          "campos": 2,
+          "LCOM*": 0.5,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Board",
+          "Ce": 5,
+          "Ca": 1,
+          "I": 0.83,
+          "metodos": 7,
+          "campos": 1,
+          "LCOM*": 0.67,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Color",
+          "Ce": 0,
+          "Ca": 7,
+          "I": 0.0,
+          "metodos": 2,
+          "campos": 3,
+          "LCOM*": 1.0,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Coordinate",
+          "Ce": 0,
+          "Ca": 5,
+          "I": 0.0,
+          "metodos": 5,
+          "campos": 2,
+          "LCOM*": 0.25,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Line",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 8,
+          "campos": 1,
+          "LCOM*": 0.71,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Piece",
+          "Ce": 1,
+          "Ca": 3,
+          "I": 0.25,
+          "metodos": 1,
+          "campos": 1,
+          "LCOM*": null,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Player",
+          "Ce": 1,
+          "Ca": 3,
+          "I": 0.25,
+          "metodos": 1,
+          "campos": 1,
+          "LCOM*": null,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Round",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 2,
+          "campos": 3,
+          "LCOM*": 0.0,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Square",
+          "Ce": 3,
+          "Ca": 1,
+          "I": 0.75,
+          "metodos": 4,
+          "campos": 2,
+          "LCOM*": 0.33,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.State",
+          "Ce": 0,
+          "Ca": 2,
+          "I": 0.0,
+          "metodos": 3,
+          "campos": 5,
+          "LCOM*": 0.7,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.TicTacToe",
+          "Ce": 7,
+          "Ca": 2,
+          "I": 0.78,
+          "metodos": 4,
+          "campos": 3,
+          "LCOM*": 0.44,
+          "LCOM4": 1
+        }
+      ],
+      "campos_privados": "16/16",
+      "campos_privados_pct": 100,
+      "metodos_publicos_pct": 82,
+      "mutadores_publicos": [
+        "domain.TicTacToe.put"
+      ],
+      "fugas_de_estado": [],
+      "mutantes": "86/121",
+      "mutation_score": 71,
+      "mutation_score_sin_io": 90,
+      "mutantes_sin_io": "86/96",
+      "mutantes_por_clase": {
+        "Main": "0/1",
+        "console.ConsoleGame": "0/24",
+        "domain.Board": "15/15",
+        "domain.Coordinate": "21/24",
+        "domain.Line": "20/27",
+        "domain.Piece": "2/2",
+        "domain.Player": "2/2",
+        "domain.Round": "2/2",
+        "domain.Square": "6/6",
+        "domain.State": "4/4",
+        "domain.TicTacToe": "14/14"
+      },
+      "loc_main": 317,
+      "loc_test": 409,
+      "ce": "1.0 · 7",
+      "historial": "history/session-1.md",
+      "duracion_s": 235,
+      "contexto_k": 46.7,
+      "ventana_k": 270.0,
+      "contexto_pct": 17,
+      "costo_bobcoins": 2.12,
+      "decisiones": 3,
+      "dec_ambiguity": 0,
+      "dec_gap": 1,
+      "dec_design": 2,
+      "dec_naming": 0,
+      "dec_scope": 0,
+      "dec_deviation": 0,
+      "dec_workaround": 0,
+      "preguntas": [
+        "What text should the `Invalid` line say for bad format vs. occupied square?",
+        "Should `Square` and `Board` constructors be package-private or public?",
+        "The test for I6 \"win checked before draw\" had a move sequence where O actually won before X; the test was wrong"
+      ],
+      "preguntas_tipo": [
+        [
+          "design",
+          "What text should the `Invalid` line say for bad format vs. occupied square?"
+        ],
+        [
+          "design",
+          "Should `Square` and `Board` constructors be package-private or public?"
+        ],
+        [
+          "gap",
+          "The test for I6 \"win checked before draw\" had a move sequence where O actually won before X; the test was wrong"
+        ]
+      ],
+      "pendientes": 0,
+      "resultado": "Done. `mvn -q verify` passes with 54 tests and the jar follows the console contr",
+      "docs_usados": 8,
+      "terminos_descartados": 0,
+      "descartados_en_codigo": {},
+      "terminos_modelo": "17/17",
+      "terminos_modelo_faltantes": [],
+      "foto_reconstruida": true,
+      "bob_sesiones": 1,
+      "costo_bob": 2.12,
+      "contexto_max_k": 46.7,
+      "duracion_bob_s": 235,
+      "llamadas_modelo": 31,
+      "builds_mvn": 3,
+      "lecturas_docs": 7,
+      "lecturas_codigo": 0,
+      "lecturas_tests": 1,
+      "docs_leidos_antes_de_editar": 7,
+      "codigo_leido_antes_de_editar": 1,
+      "primera_edicion": "codigo",
+      "ediciones_docs": 0,
+      "ediciones_codigo": 20,
+      "docs_antes_que_codigo": false,
+      "fuente_costo": "bob.db",
+      "lecturas": "7 · 0 · 1",
+      "antes_de_editar": "7 · 1"
+    },
+    "F2": {
+      "verify": "ok",
+      "tests": 73,
+      "tests_fallidos": 0,
+      "aceptacion": "12/12",
+      "aceptacion_fallos": [],
+      "aceptacion_logica": "12/12",
+      "aceptacion_F1": "9/9",
+      "aceptacion_F2": "3/3",
+      "clases": 14,
+      "paquetes": 3,
+      "Ce_mediana": 3.0,
+      "Ce_max": 7,
+      "Ca_max": 9,
+      "LCOM*_mediana": 0.58,
+      "clases_LCOM4>1": 6,
+      "clases_con_IO": [
+        "Main",
+        "console.ConsoleGame"
+      ],
+      "dependencias_entre_paquetes": {
+        "(raíz)": [
+          "tictactoe.console",
+          "tictactoe.domain"
+        ],
+        "tictactoe.console": [
+          "tictactoe.domain"
+        ]
+      },
+      "ciclos_entre_paquetes": [],
+      "por_clase": [
+        {
+          "clase": "Main",
+          "Ce": 6,
+          "Ca": 0,
+          "I": 1.0,
+          "metodos": 2,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "console.ConsoleGame",
+          "Ce": 5,
+          "Ca": 1,
+          "I": 0.83,
+          "metodos": 5,
+          "campos": 2,
+          "LCOM*": 0.5,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Board",
+          "Ce": 5,
+          "Ca": 1,
+          "I": 0.83,
+          "metodos": 7,
+          "campos": 1,
+          "LCOM*": 0.67,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Color",
+          "Ce": 0,
+          "Ca": 9,
+          "I": 0.0,
+          "metodos": 2,
+          "campos": 3,
+          "LCOM*": 1.0,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Coordinate",
+          "Ce": 0,
+          "Ca": 8,
+          "I": 0.0,
+          "metodos": 5,
+          "campos": 2,
+          "LCOM*": 0.25,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.HumanPlayer",
+          "Ce": 4,
+          "Ca": 1,
+          "I": 0.8,
+          "metodos": 2,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "domain.Line",
+          "Ce": 1,
+          "Ca": 2,
+          "I": 0.33,
+          "metodos": 8,
+          "campos": 1,
+          "LCOM*": 0.71,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.PcPlayer",
+          "Ce": 5,
+          "Ca": 1,
+          "I": 0.83,
+          "metodos": 4,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "domain.Piece",
+          "Ce": 1,
+          "Ca": 3,
+          "I": 0.25,
+          "metodos": 1,
+          "campos": 1,
+          "LCOM*": null,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Player",
+          "Ce": 3,
+          "Ca": 6,
+          "I": 0.33,
+          "metodos": 2,
+          "campos": 1,
+          "LCOM*": 1.0,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Round",
+          "Ce": 1,
+          "Ca": 1,
+          "I": 0.5,
+          "metodos": 2,
+          "campos": 3,
+          "LCOM*": 0.0,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Square",
+          "Ce": 3,
+          "Ca": 1,
+          "I": 0.75,
+          "metodos": 4,
+          "campos": 2,
+          "LCOM*": 0.33,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.State",
+          "Ce": 0,
+          "Ca": 2,
+          "I": 0.0,
+          "metodos": 3,
+          "campos": 5,
+          "LCOM*": 0.7,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.TicTacToe",
+          "Ce": 7,
+          "Ca": 5,
+          "I": 0.58,
+          "metodos": 4,
+          "campos": 3,
+          "LCOM*": 0.44,
+          "LCOM4": 1
+        }
+      ],
+      "campos_privados": "16/16",
+      "campos_privados_pct": 100,
+      "metodos_publicos_pct": 79,
+      "mutadores_publicos": [
+        "domain.TicTacToe.put"
+      ],
+      "fugas_de_estado": [],
+      "mutantes": "107/150",
+      "mutation_score": 71,
+      "mutation_score_sin_io": 88,
+      "mutantes_sin_io": "107/121",
+      "mutantes_por_clase": {
+        "Main": "0/4",
+        "console.ConsoleGame": "0/25",
+        "domain.Board": "15/15",
+        "domain.Coordinate": "21/24",
+        "domain.Line": "20/27",
+        "domain.PcPlayer": "21/25",
+        "domain.Piece": "2/2",
+        "domain.Player": "2/2",
+        "domain.Round": "2/2",
+        "domain.Square": "6/6",
+        "domain.State": "4/4",
+        "domain.TicTacToe": "14/14"
+      },
+      "loc_main": 384,
+      "loc_test": 584,
+      "ce": "3.0 · 7",
+      "historial": "history/session-2.md",
+      "duracion_s": 428,
+      "contexto_k": 94.8,
+      "ventana_k": 270.0,
+      "contexto_pct": 35,
+      "costo_bobcoins": 5.05,
+      "decisiones": 6,
+      "dec_ambiguity": 0,
+      "dec_gap": 0,
+      "dec_design": 4,
+      "dec_naming": 1,
+      "dec_scope": 1,
+      "dec_deviation": 0,
+      "dec_workaround": 0,
+      "preguntas": [
+        "Should `chooseCoordinate` receive `Board` or `TicTacToe`?",
+        "Should `chooseCoordinate` signal \"defer to console\" via `null` return or a separate interface method?",
+        "Should `Player` be an abstract class or an interface?",
+        "What to name the two concrete subclasses?",
+        "How does PcPlayer implement reading order for Win/Block candidates?",
+        "Should REQUIREMENTS.md be updated to reflect CR-1?"
+      ],
+      "preguntas_tipo": [
+        [
+          "design",
+          "Should `chooseCoordinate` receive `Board` or `TicTacToe`?"
+        ],
+        [
+          "design",
+          "Should `chooseCoordinate` signal \"defer to console\" via `null` return or a separate interface method?"
+        ],
+        [
+          "design",
+          "Should `Player` be an abstract class or an interface?"
+        ],
+        [
+          "naming",
+          "What to name the two concrete subclasses?"
+        ],
+        [
+          "design",
+          "How does PcPlayer implement reading order for Win/Block candidates?"
+        ],
+        [
+          "scope",
+          "Should REQUIREMENTS.md be updated to reflect CR-1?"
+        ]
+      ],
+      "pendientes": 0,
+      "resultado": "Done. All 73 tests pass (`mvn -q verify`), docs and code are in agreement.",
+      "docs_usados": 5,
+      "terminos_descartados": 1,
+      "descartados_en_codigo": {
+        "Index": [
+          "readingOrderIndex"
+        ]
+      },
+      "terminos_modelo": "19/19",
+      "terminos_modelo_faltantes": [],
+      "foto_reconstruida": false,
+      "bob_sesiones": 1,
+      "costo_bob": 5.05,
+      "contexto_max_k": 94.8,
+      "duracion_bob_s": 428,
+      "llamadas_modelo": 47,
+      "builds_mvn": 5,
+      "lecturas_docs": 9,
+      "lecturas_codigo": 7,
+      "lecturas_tests": 5,
+      "docs_leidos_antes_de_editar": 8,
+      "codigo_leido_antes_de_editar": 9,
+      "primera_edicion": "docs",
+      "ediciones_docs": 7,
+      "ediciones_codigo": 9,
+      "docs_antes_que_codigo": true,
+      "fuente_costo": "bob.db",
+      "lecturas": "9 · 7 · 5",
+      "antes_de_editar": "8 · 9",
+      "clases_nuevas": 2,
+      "clases_modificadas": 3,
+      "clases_borradas": 0,
+      "ocp_ratio": 0.4,
+      "lineas_cambiadas_en_existentes": 60,
+      "tests_existentes_tocados": 2,
+      "detalle_nuevas": [
+        "tictactoe/domain/HumanPlayer.java",
+        "tictactoe/domain/PcPlayer.java"
+      ],
+      "detalle_modificadas": [
+        "tictactoe/Main.java",
+        "tictactoe/console/ConsoleGame.java",
+        "tictactoe/domain/Player.java"
+      ],
+      "detalle_tests_tocados": [
+        "tictactoe/domain/RoundTest.java",
+        "tictactoe/domain/TicTacToeTest.java"
+      ],
+      "ocp": "2 / 3 / 0",
+      "requirements_modificado": true,
+      "docs_domain_actualizados": [
+        "decisions.md",
+        "glossary.md",
+        "model.puml",
+        "modules.md"
+      ]
+    },
+    "F3": {
+      "verify": "ok",
+      "tests": 93,
+      "tests_fallidos": 0,
+      "aceptacion": "16/16",
+      "aceptacion_fallos": [],
+      "aceptacion_logica": "16/16",
+      "aceptacion_F1": "9/9",
+      "aceptacion_F2": "3/3",
+      "aceptacion_F3": "4/4",
+      "clases": 16,
+      "paquetes": 3,
+      "Ce_mediana": 3.5,
+      "Ce_max": 8,
+      "Ca_max": 11,
+      "LCOM*_mediana": 0.6,
+      "clases_LCOM4>1": 6,
+      "clases_con_IO": [
+        "Main",
+        "console.ConsoleGame",
+        "console.ThreePiecesConsoleGame"
+      ],
+      "dependencias_entre_paquetes": {
+        "(raíz)": [
+          "tictactoe.console",
+          "tictactoe.domain"
+        ],
+        "tictactoe.console": [
+          "tictactoe.domain"
+        ]
+      },
+      "ciclos_entre_paquetes": [],
+      "por_clase": [
+        {
+          "clase": "Main",
+          "Ce": 8,
+          "Ca": 0,
+          "I": 1.0,
+          "metodos": 2,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "console.ConsoleGame",
+          "Ce": 5,
+          "Ca": 1,
+          "I": 0.83,
+          "metodos": 5,
+          "campos": 2,
+          "LCOM*": 0.5,
+          "LCOM4": 1
+        },
+        {
+          "clase": "console.ThreePiecesConsoleGame",
+          "Ce": 4,
+          "Ca": 1,
+          "I": 0.8,
+          "metodos": 8,
+          "campos": 2,
+          "LCOM*": 0.5,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Board",
+          "Ce": 5,
+          "Ca": 2,
+          "I": 0.71,
+          "metodos": 8,
+          "campos": 1,
+          "LCOM*": 0.71,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Color",
+          "Ce": 0,
+          "Ca": 11,
+          "I": 0.0,
+          "metodos": 2,
+          "campos": 3,
+          "LCOM*": 1.0,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Coordinate",
+          "Ce": 0,
+          "Ca": 10,
+          "I": 0.0,
+          "metodos": 5,
+          "campos": 2,
+          "LCOM*": 0.25,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.HumanPlayer",
+          "Ce": 4,
+          "Ca": 1,
+          "I": 0.8,
+          "metodos": 2,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "domain.Line",
+          "Ce": 1,
+          "Ca": 2,
+          "I": 0.33,
+          "metodos": 8,
+          "campos": 1,
+          "LCOM*": 0.71,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.PcPlayer",
+          "Ce": 5,
+          "Ca": 1,
+          "I": 0.83,
+          "metodos": 4,
+          "campos": 0,
+          "LCOM*": null,
+          "LCOM4": null
+        },
+        {
+          "clase": "domain.Piece",
+          "Ce": 1,
+          "Ca": 4,
+          "I": 0.2,
+          "metodos": 1,
+          "campos": 1,
+          "LCOM*": null,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Player",
+          "Ce": 3,
+          "Ca": 7,
+          "I": 0.3,
+          "metodos": 2,
+          "campos": 1,
+          "LCOM*": 1.0,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.Round",
+          "Ce": 1,
+          "Ca": 2,
+          "I": 0.33,
+          "metodos": 2,
+          "campos": 3,
+          "LCOM*": 0.0,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.Square",
+          "Ce": 3,
+          "Ca": 1,
+          "I": 0.75,
+          "metodos": 5,
+          "campos": 2,
+          "LCOM*": 0.25,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.State",
+          "Ce": 0,
+          "Ca": 4,
+          "I": 0.0,
+          "metodos": 4,
+          "campos": 7,
+          "LCOM*": 0.76,
+          "LCOM4": 2
+        },
+        {
+          "clase": "domain.ThreePiecesTicTacToe",
+          "Ce": 7,
+          "Ca": 2,
+          "I": 0.78,
+          "metodos": 8,
+          "campos": 6,
+          "LCOM*": 0.71,
+          "LCOM4": 1
+        },
+        {
+          "clase": "domain.TicTacToe",
+          "Ce": 7,
+          "Ca": 5,
+          "I": 0.58,
+          "metodos": 4,
+          "campos": 3,
+          "LCOM*": 0.44,
+          "LCOM4": 1
+        }
+      ],
+      "campos_privados": "23/23",
+      "campos_privados_pct": 100,
+      "metodos_publicos_pct": 67,
+      "mutadores_publicos": [
+        "domain.ThreePiecesTicTacToe.move",
+        "domain.ThreePiecesTicTacToe.put",
+        "domain.TicTacToe.put"
+      ],
+      "fugas_de_estado": [],
+      "mutantes": "150/249",
+      "mutation_score": 60,
+      "mutation_score_sin_io": 90,
+      "mutantes_sin_io": "150/167",
+      "mutantes_por_clase": {
+        "Main": "0/8",
+        "console.ConsoleGame": "0/25",
+        "console.ThreePiecesConsoleGame": "0/49",
+        "domain.Board": "16/16",
+        "domain.Coordinate": "21/24",
+        "domain.Line": "20/27",
+        "domain.PcPlayer": "21/25",
+        "domain.Piece": "2/2",
+        "domain.Player": "2/2",
+        "domain.Round": "2/2",
+        "domain.Square": "8/8",
+        "domain.State": "6/7",
+        "domain.ThreePiecesTicTacToe": "38/40",
+        "domain.TicTacToe": "14/14"
+      },
+      "loc_main": 583,
+      "loc_test": 747,
+      "ce": "3.5 · 8",
+      "historial": "history/session-1.md",
+      "duracion_s": 351,
+      "decisiones": 6,
+      "dec_ambiguity": 1,
+      "dec_gap": 1,
+      "dec_design": 4,
+      "dec_naming": 0,
+      "dec_scope": 0,
+      "dec_deviation": 0,
+      "dec_workaround": 0,
+      "preguntas": [
+        "Should `ThreePiecesTicTacToe` extend `TicTacToe` or be a separate class?",
+        "Should the console handle both modes in one class or two?",
+        "How should `State` signal whether we are in the move phase?",
+        "How should `Board` support moving a Piece?",
+        "The sequence \"after both players have 0 pieces remaining, who moves first?\"",
+        "The CR says move input is \"fromRow fromColumn toRow toColumn\" — should the console also validate that from ≠ to?"
+      ],
+      "preguntas_tipo": [
+        [
+          "design",
+          "Should `ThreePiecesTicTacToe` extend `TicTacToe` or be a separate class?"
+        ],
+        [
+          "design",
+          "Should the console handle both modes in one class or two?"
+        ],
+        [
+          "design",
+          "How should `State` signal whether we are in the move phase?"
+        ],
+        [
+          "design",
+          "How should `Board` support moving a Piece?"
+        ],
+        [
+          "ambiguity",
+          "The sequence \"after both players have 0 pieces remaining, who moves first?\""
+        ],
+        [
+          "gap",
+          "The CR says move input is \"fromRow fromColumn toRow toColumn\" — should the console also validate that from ≠ to?"
+        ]
+      ],
+      "pendientes": 0,
+      "resultado": "done — `mvn -q verify` passes with 93 tests, 0 failures.",
+      "docs_usados": 8,
+      "terminos_descartados": 1,
+      "descartados_en_codigo": {
+        "Index": [
+          "readingOrderIndex"
+        ]
+      },
+      "terminos_modelo": "21/21",
+      "terminos_modelo_faltantes": [],
+      "foto_reconstruida": false,
+      "bob_sesiones": 1,
+      "costo_bob": 4.09,
+      "contexto_max_k": 68.1,
+      "duracion_bob_s": 351,
+      "llamadas_modelo": 44,
+      "builds_mvn": 2,
+      "lecturas_docs": 9,
+      "lecturas_codigo": 11,
+      "lecturas_tests": 2,
+      "docs_leidos_antes_de_editar": 8,
+      "codigo_leido_antes_de_editar": 12,
+      "primera_edicion": "docs",
+      "ediciones_docs": 10,
+      "ediciones_codigo": 8,
+      "docs_antes_que_codigo": true,
+      "costo_bobcoins": 4.09,
+      "contexto_k": 68.1,
+      "fuente_costo": "bob.db",
+      "lecturas": "9 · 11 · 2",
+      "antes_de_editar": "8 · 12",
+      "clases_nuevas": 2,
+      "clases_modificadas": 4,
+      "clases_borradas": 0,
+      "ocp_ratio": 0.33,
+      "lineas_cambiadas_en_existentes": 59,
+      "tests_existentes_tocados": 0,
+      "detalle_nuevas": [
+        "tictactoe/console/ThreePiecesConsoleGame.java",
+        "tictactoe/domain/ThreePiecesTicTacToe.java"
+      ],
+      "detalle_modificadas": [
+        "tictactoe/Main.java",
+        "tictactoe/domain/Board.java",
+        "tictactoe/domain/Square.java",
+        "tictactoe/domain/State.java"
+      ],
+      "detalle_tests_tocados": [],
+      "ocp": "2 / 4 / 0",
+      "requirements_modificado": true,
+      "docs_domain_actualizados": [
+        "decisions.md",
+        "game-states.md",
+        "glossary.md",
+        "invariants.md",
+        "model.puml",
+        "modules.md"
+      ]
+    }
+  }
+}

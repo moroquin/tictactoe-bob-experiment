@@ -1,0 +1,1 @@
+With DDD wins at what the domain defines: the correct PC, encapsulation and vocabulary. Without DDD wins at cost, size and how much code each change touches. Asking the docs to drive the work did not reduce code reading (9 files before editing in F2, in both runs) and raised the cost of F2 from 3.85 to 5.05.

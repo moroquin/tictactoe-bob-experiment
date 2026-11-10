@@ -1,161 +1,154 @@
-# Tic-Tac-Toe with IBM Bob: DDD vs. no DDD
+# Tic-Tac-Toe with IBM Bob: with DDD vs. without DDD
 
-IBM Bob builds the same Tic-Tac-Toe twice, from the same requirements and with the same prompts:
+Does domain documentation (DDD) make an AI coding assistant build and, above all, **change** a program more accurately and maintainably, even when every session starts without memory?
 
-- in `without-ddd`, with the requirements alone;
-- in `with-ddd`, with the requirements plus the DDD documentation: ubiquitous language, domain model, invariants, game states and module boundaries.
+To answer it, IBM Bob builds the same Tic-Tac-Toe twice, with the same requirements and the same prompts:
 
-Each branch ends up with its own game and a `RESULTS.md` holding the time, tokens and cost of every phase, the decisions Bob had to make on its own, and the quality metrics. From `main`, Bob compares both branches and writes the analysis.
+- **without-ddd**: `REQUIREMENTS.md` only.
+- **with-ddd**: `REQUIREMENTS.md` plus the DDD documentation in `docs/domain/` (glossary, model, invariants, states, modules with a file map, and a decision log) and an `AGENTS.md` that says this documentation drives the development.
 
-This page is the quick start. [EXPERIMENT.md](EXPERIMENT.md) has the full design, every metric and every file.
+Each phase is a new Bob session: F1 builds the game, F2 adds an opponent controlled by the program (CR-1) and F3 changes a core rule: three pieces that move (CR-2). After each phase, `measure.py` measures both folders; at the end Bob compares the results.
 
-## How it works
+## What is in this repository
 
-| Branch | What it holds |
+| File | What it is for |
 |---|---|
-| `main` | This guide, `EXPERIMENT.md` and `harness/`: the prompts, the scripts, the acceptance tests and, at the end, the analysis |
-| `without-ddd`, `with-ddd` | The starting point at first. After the run: Bob's code, one commit per phase, and `RESULTS.md` |
-| tags `start/without-ddd`, `start/with-ddd` | The untouched starting point of each branch. Every run starts here |
+| `src/without-ddd/`, `src/with-ddd/` | The starting point of each folder: what Bob finds before F1 |
+| `prompts/F1-build.md`, `F2-cr1-human-vs-pc.md`, `F3-cr2-three-pieces.md` | The prompts of each phase, the same for both folders |
+| `scenarios.tsv` | The hidden acceptance games of each phase (Bob never sees them) |
+| `measure.py` | Resets the folders, takes a snapshot of each phase, audits the isolation, measures everything and archives each run in the history |
+| `design_metrics.py` | The design calculations in a single module: coupling (Ce, Ca, propagation cost, Yourdon & Constantine types), cohesion (LCOM*, LCOM4, TCC, LCC), encapsulation and file and method size |
+| `stats.py` | Statistics of every run: medians, paired differences, sign test and correlations (`python3 measure.py stats`) |
+| `COMPARE.md` | The prompt Bob uses to compare both folders and write `CONCLUSIONS.md` |
+| `presentation.py` | Generates `results/presentation.pptx` with the rules, the metrics, the model and the results of each phase |
+| `scripts/init.sh`, `scripts/new_run.sh` | Setup checks and the first reset; archive the current run and start a new one |
+| `config/bob-settings.json` | Recommended permissions for Bob during the experiment |
+| `.bob/rules/` | Bob's rules in this repository, for the comparing session |
+| `reference/model-original.png` | The team's original domain diagram, which the model comes from |
+| `results/` | The current run: snapshots of each phase, `summary.md`, `metrics.md`, `metrics.json` and `presentation.pptx` |
+| `runs/run-N/` | The history: earlier runs archived, with their `description.txt` and, if Bob compared them, their `CONCLUSIONS.md` |
+| `runs/stats.md`, `stats.json`, `history.csv` | The statistics of every run and one row per run, phase and folder for a spreadsheet |
+| `FAILURES.md`, `failures.json` | The observed failures, their cause and their evidence; `failures.json` is the summary the presentation uses |
+| `conclusion.txt` | The verdict in one sentence, shown on the conclusion slide |
 
-The same three prompts go to both branches, each in a new Bob session:
+## Requirements
 
-| Phase | Prompt | Result |
-|---|---|---|
-| F1 | Build the game for two people | `java -jar target/tictactoe.jar` |
-| F2 | CR-1: play against the PC, a deterministic opponent that Bob programs (fixed rules, no AI) | `java -jar target/tictactoe.jar --vs-pc` |
-| F3 | CR-2: three Pieces each, which move once they are all on the Board | `java -jar target/tictactoe.jar --three-pieces` |
+- Java 21, Maven 3.9 or later and Python 3.9 or later. `measure.py` also uses `jdeps` and `javap`, which come with the JDK.
+- [Bob Shell](https://bob.ibm.com/docs/shell/getting-started/install-and-setup) with a session started.
+- For the presentation: `pip install python-pptx`.
 
-## 1. Install the tools
+## Setup (once)
 
-- git, Java 21, Maven 3.9 or later, and Python 3.9 or later.
-- Bob Shell, which needs Node.js 24 or later. On macOS or Linux:
-  ```bash
-  curl -fsSL https://bob.ibm.com/download/bobshell.sh | bash
-  ```
-  The [Bob Shell installation guide](https://bob.ibm.com/docs/shell/getting-started/install-and-setup) has the other options.
-- Windows: use WSL.
+This repository is the **control plane**: it holds the starting points, the prompts, the hidden games and the measurements, and it creates the experiment folders next to it. Those folders have no git: they are outside any repository and have no `.git` of their own, so git fails there even if Bob tries it. `measure.py reset` refuses to create them inside a git repository, `snapshot` warns if Bob created a `.git` during a phase, and `audit` checks both.
 
-## 2. Create your Bob API key and make it available
+`scripts/init.sh` checks everything below (tools, Java 21, Bob's permissions, no global context, no git around the folders) and then runs `measure.py reset`.
 
-The scripts run Bob without anyone at the keyboard, so Bob signs in with an API key instead of the browser.
-
-1. **Create the key.** Sign in at [bob.ibm.com](https://bob.ibm.com), open your subscription instance, and create an API key in the API key management section. Choose the **Inference** scope; a **General** key also needs your team ID. Copy the key right away: Bob does not show it again.
-
-2. **Make it available as `BOB_API_KEY`.** Pick one way:
-   - **Only for the terminal you are in.** Nothing is shown or saved:
-     ```bash
-     read -rs BOB_API_KEY && export BOB_API_KEY      # paste the key and press Enter
-     ```
-   - **macOS, kept in the Keychain**, so every new terminal has it:
-     ```bash
-     security add-generic-password -a "$USER" -s bob-api-key -w      # paste the key when asked
-     echo 'export BOB_API_KEY="$(security find-generic-password -a "$USER" -s bob-api-key -w 2>/dev/null)"' >> ~/.zshrc
-     source ~/.zshrc
-     ```
-   - **Linux, in a file only you can read**:
-     ```bash
-     mkdir -p ~/.config/bob && (umask 077 && read -rs k && printf '%s' "$k" > ~/.config/bob/api-key)
-     echo 'export BOB_API_KEY="$(cat ~/.config/bob/api-key)"' >> ~/.bashrc
-     source ~/.bashrc
-     ```
-
-3. **Check it without printing it:**
+1. **Bob's permissions.** Merge `config/bob-settings.json` into `~/.bob/settings/settings.json`, keeping your other keys and a backup: it denies `git`, `curl`, `wget`, `env` and `printenv`, approves only `mvn`, `java` and the `date` command the session history needs, and does not allow reading outside the working folder. It also denies the shell commands that read or list files (`cat`, `ls`, `grep`, `head`, `find`…): they take any path, so they could read the hidden games; Bob reads with its own file tools, which stay inside the folder. No `git …` or reading command may stay approved.
+2. **No global context.** Leave `~/.bob/rules/` empty and do not create `~/.bob/AGENTS.md` or an `AGENTS.md` in the folder that holds this repository: Bob would load them in both folders.
+3. **Create the experiment folders** next to this repository:
    ```bash
-   [ -n "$BOB_API_KEY" ] && echo "BOB_API_KEY is set (${#BOB_API_KEY} characters)"
+   python3 measure.py reset
+   ```
+   It is the same as copying `src/without-ddd` and `src/with-ddd` to `../without-ddd` and `../with-ddd`, and it also records the start time and the series, to measure Bob's sessions later. The result:
+   ```
+   workspace/
+   ├── tictactoe-bob-experiment/   ← this repository
+   ├── without-ddd/
+   └── with-ddd/
    ```
 
-4. **Only if your key is General**, add your team ID:
+## Each phase (F1, F2 and F3)
+
+1. **One terminal per folder.** Open a terminal in `../without-ddd` and another in `../with-ddd`, run `bob` in each one and send the content of `prompts/F<n>-….md` unchanged. Each phase is a new session: do not continue the previous one.
+2. **Wait for both to finish.** Bob works without asking, leaves the code building and writes its history in `history/`.
+3. **Take the snapshot** from this repository:
    ```bash
-   export BOB_EXTRA_FLAGS="--team-id <your-team-id>"
+   python3 measure.py snapshot F<n>
+   ```
+   It copies each folder to `results/<folder>/F<n>/` and **moves the history out of the folders**, so that the next session does not read it as documentation.
+4. **Audit** that no session left its folder or used forbidden commands:
+   ```bash
+   python3 measure.py audit
+   ```
+   If a session comes out `INVALID`, repeat the experiment from `reset`.
+5. **Measure** (it takes one or two minutes per snapshot, mostly because of the mutation testing):
+   ```bash
+   python3 measure.py
    ```
 
-Never put the key in the repository or on screen during a demo, and never `echo` it. `.env` is in `.gitignore`, and the scripts check every Bob log for the key.
+There is no need to copy tokens by hand: `measure.py` reads the cost, the context, the duration and every file Bob read or edited from the Bob Shell database (`~/.bob/db/bob.db`), without modifying it.
 
-## 3. Configure Bob once
+## Compare and present
 
-- Merge `harness/bob/settings-approval.json` into `~/.bob/settings/settings.json`, keeping your other keys. It denies `git`, `curl`, `wget`, `env` and `printenv`, and keeps Bob from reading outside its folder.
-- Leave `~/.bob/rules/` empty, and do not create `~/.bob/AGENTS.md`: global rules would reach both branches.
+- **Bob's analysis:** open a terminal in this repository, run `bob` and type `run COMPARE.md`. Bob runs `measure.py`, reads the snapshots and writes `CONCLUSIONS.md`. Every number must appear in `results/metrics.md`.
+- **Executive summary:** `results/summary.md`, with the scoreboard per phase (the best value in bold), the cumulative cost, efficiency, scalability and the findings.
+- **Presentation:** `python3 presentation.py` generates `results/presentation.pptx` with every run: those in `runs/` and the current one. For each phase it shows each run and whether the result repeats, and it ends with the failures and a conclusion computed from what repeats across runs. To view it in the macOS preview, which does not show decks with notes: `NO_NOTES=1 OUTPUT=/tmp/preview.pptx python3 presentation.py`.
 
-## 4. Create the branches
+## Board log and series
 
-From the root of this repository, on `main`:
+Since **series 2**, `REQUIREMENTS.md` asks for a log: when the variable `TICTACTOE_BOARD_LOG` exists, the program writes to that file one JSON line with the empty board at the start and another one after every valid put or move:
 
-```bash
-bash harness/scripts/setup-branches.sh
-git push -u origin without-ddd with-ddd refs/tags/start/without-ddd refs/tags/start/with-ddd
+```json
+{"board":[{"row":1,"column":1,"color":"X"}],"state":"IN_PROGRESS"}
 ```
 
-If they already exist, recreate them with `FORCE=1 bash harness/scripts/setup-branches.sh`, then run the push it prints, which uses `--force`.
+This way accuracy does not depend on the console format: `measure.py` plays each hidden game with the log on and counts it as correct if it starts empty, if each line is a valid put or move by the player whose turn it is, and if the final board and state are the expected ones. The console is still measured separately, because it is what the user sees. The F3 prompt reminds that moves are logged too.
 
-## 5. Tell the scripts where things are
+The **series** (the `SERIES` constant in `measure.py`) goes up every time the requirements, the prompts or the scenarios change. `reset` records it and the stats only combine runs of the same series. Series 1 is the runs without a log.
 
-```bash
-export REPO_URL=git@github.com:<you>/<repo>.git   # this repository
-export RUNS_DIR=$HOME/ttt-bob-runs                 # where Bob works: outside this repository
-```
+## Several runs
 
-No folder above `RUNS_DIR` may contain an `AGENTS.md`. Optional: `MAX_COST` and `MAX_TURNS` limit each phase (use the same values for both branches), and `LIVE=0` hides the live view.
+One run alone is an anecdote; what repeats across runs is a signal.
 
-## 6. Check that Bob loads the rules (once)
+`scripts/new_run.sh ["description"]` does steps 1 and 2 in one go: it asks for confirmation first, measures the run if needed, archives it and resets the folders. It never touches `src/`.
 
-```bash
-bash harness/scripts/new-run.sh with-ddd 0
-RUN_DIR=$(sed -n 's/^run_dir=//p' harness/results/with-ddd-r0/run.txt)
-(cd "$RUN_DIR" && bob run --workspace "$RUN_DIR" --trust --format json \
-  "List the rules and the AGENTS.md instructions you were given for this workspace. Do not change any file.") \
-  | python3 -c 'import json, sys; print(json.load(sys.stdin)["last_message"])'
-rm -rf "$RUN_DIR" harness/results/with-ddd-r0
-```
+1. **Measure and archive the current run:**
+   ```bash
+   python3 measure.py
+   python3 measure.py archive "what with-ddd received in this run"
+   ```
+   `archive` moves `results/` to `runs/run-N/` (the next free number), saves the description, leaves `results/` empty and recomputes the stats. `reset` refuses to start while `results/` holds snapshots that are not archived, so that two runs never mix.
+2. **Start another one:** `python3 measure.py reset` and the phases.
+3. **Statistics:** `python3 measure.py stats` writes `runs/stats.md` with, per phase and folder, the median, range, mean and deviation of each metric; the paired difference per run (with DDD minus without DDD); in how many runs each folder wins, with the p of the sign test; efficiency and scalability per phase; and the Spearman correlations between design, accuracy and cost, overall and inside each folder. `runs/history.csv` has one row per run, phase and folder.
+4. **Measure everything again** when the metrics change: `python3 measure.py all` measures every archived run and the current one again, and recomputes the stats. For a single one: `RESULTS=runs/run-N python3 measure.py`.
 
-The answer must mention the three workspace rules (stay in the folder and do not use git, work without asking, write the session history) and the golden rules of `AGENTS.md`. If it does not, stop here: the experiment depends on it. Section 5 of `EXPERIMENT.md` has the full pilot.
+With fewer than 6 runs, the sign test cannot give p < 0.05 even if one folder always wins: with 3 to 5 runs, what counts is whether the difference repeats.
 
-## 7. Run the prompts in each branch
+If you forget to take a snapshot between phases, the code of that phase is overwritten. It can be rebuilt by replaying the edits Bob saved in `bob.db` and validating them against what the next phase read; that is how F1 of run 2 was rebuilt (see the note in `metrics.md`). The history of the previous phase also stays in the folder: check with `bob.db` that the next session did not read it.
 
-```bash
-bash harness/scripts/run-branch.sh without-ddd &
-bash harness/scripts/run-branch.sh with-ddd &
-wait
-```
+## Rules for valid data
 
-Each command sends the three prompts, one after the other, each to a new Bob session, and shows every action of Bob in the terminal. After each phase it saves the result into its branch: the code and an updated `RESULTS.md`.
+- **Same starting point.** Both folders share `REQUIREMENTS.md`, `pom.xml` (with-ddd adds ArchUnit) and the rules in `.bob/rules/`: work without asking, do not leave the folder, do not use git or the network, and write the history.
+- **Same prompts, no help.** Send each prompt as is. Do not answer Bob's questions or correct its work during a phase.
+- **New sessions, without memory.** One new session per phase and per folder. The history leaves the folder with `snapshot`, so the next session only sees the code and, in with-ddd, the documentation.
+- **Isolation.** Each folder works alone; `audit` checks it session by session.
+- **External measurement.** The hidden games, the mutants, coupling, cohesion and cost are measured by `measure.py`, not by Bob. The decisions and pending items are Bob's own account: they are used to see which questions the documentation left open.
 
-- **One phase at a time:** `bash harness/scripts/run-branch.sh with-ddd 1`, and later the same command with `2`, or with nothing to finish.
-- **Start a branch over:** `FORCE=1 bash harness/scripts/run-branch.sh with-ddd`.
+## What is measured
 
-Bob works in an isolated copy of the branch's starting point: one commit, no remote, and a folder whose name does not say which branch it is. So it can see neither the other branch nor any history. You never need to open that folder: the result goes to the branch.
-
-## 8. Play each version live
-
-```bash
-bash harness/scripts/play.sh without-ddd                  # two people
-bash harness/scripts/play.sh with-ddd --vs-pc             # against the PC
-bash harness/scripts/play.sh with-ddd --three-pieces      # three Pieces each
-bash harness/scripts/play.sh with-ddd-r1/p1               # the version after phase 1
-```
-
-`play.sh` downloads the version into `~/ttt-play/`, builds it when it changed, and starts the game. To play, type a row and a column, for example `2 3`. Before a talk, prepare everything with `PLAY_BUILD_ONLY=1 bash harness/scripts/play.sh with-ddd` (and the same for `without-ddd`).
-
-## 9. Compare the branches on main
-
-```bash
-bash harness/scripts/evaluate.sh
-```
-
-It copies both branches into `harness/results/compare/`, inside `main`, so Bob can read them without git. Then it starts a Bob session on `main` that writes the analysis to `harness/results/CONCLUSIONS.md`: the numbers side by side, the decisions each branch had to make on its own and which DDD document answers each one, the pending items, the design, and what it all says about each hypothesis.
-
-To use the Bob IDE instead, run `EVAL_PREPARE_ONLY=1 bash harness/scripts/evaluate.sh`, open `main` in the IDE, and send the content of `harness/prompts/EVAL-compare.md`.
-
-Read `CONCLUSIONS.md` critically: every number in it must appear in a `RESULTS.md`. Then commit `harness/results/` to `main`.
-
-With one run per branch, the differences are observations of that run, not proof. To repeat the experiment several times per branch, see section 6 of `EXPERIMENT.md`.
-
-## If something fails
-
-| Message | What to do |
+| Group | Metrics |
 |---|---|
-| `BOB_API_KEY is not set` | Step 2, in the same terminal |
-| `tag start/with-ddd is not in …` | Step 4: push the branches and the `start/` tags |
-| `branch with-ddd already holds the results of a run` | Continue the current run, or start over with `FORCE=1` |
-| `… AGENTS.md exists …` or `~/.bob/rules is not empty` | Move `RUNS_DIR` somewhere else, or empty the global rules while you run the experiment |
-| `NOTE: Bob did not write history/session.md` | Bob is not loading `.bob/rules`: repeat step 6 |
-| `WARNING: … isolation violations` | Bob reached outside its folder: discard that run and start the branch over with `FORCE=1` |
+| Accuracy | Hidden games from `scenarios.tsv` with the regressions of earlier phases, checked in two ways: the board's **JSONL log** (the state of the game, move by move) and the **console** (what the user sees: the exact output, the logic even if the format fails, and whether it shows the same board as the log). Unit tests and mutation score (total and without the console) |
+| Agent cost | Cost, max context, duration, model calls and builds, from `bob.db` |
+| How Bob worked | Docs and code files read before the first edit and in the whole session; whether it edited the docs before the code |
+| Size | Classes, packages and lines; lines per file (median, max, files with more than 200); lines per method (methods with more than 30) and methods with more than 3 parameters |
+| Coupling | Efferent (Ce) and afferent (Ca); propagation cost (what part of the system a change reaches); Yourdon & Constantine connection type between classes: data, stamp, control, external, common or content, with an index from 1 to 6 |
+| Cohesion | LCOM* and LCOM4; TCC and LCC (pairs of methods that share fields, directly or indirectly) |
+| Design | Encapsulation; classes with console input and output |
+| Efficiency and scalability | Bobcoins and seconds per correct hidden game (also with the correct logic); Bobcoins per 100 lines touched in F2 and F3; how propagation cost, coupling and cohesion change from F1 to F3 |
+| Change (F2 and F3) | New, modified and deleted classes; Open/Closed ratio; lines changed in existing classes; existing tests touched; docs updated |
+| Autonomy | Decisions Bob made alone, by type, with the question it would have asked; pending items |
+| Language | Discarded glossary terms that appear in the code and glossary terms present |
+
+## Hypotheses
+
+- **H1, build (F1):** small differences. Bob already knows Tic-Tac-Toe.
+- **H2, change (F2 and F3):** with-ddd reads less code before editing, changes fewer existing classes, does not break earlier games and keeps the vocabulary.
+- **H3, design:** with-ddd ends up better encapsulated, with a domain free of console I/O and the glossary's vocabulary.
+
+## Limits
+
+- **One execution per folder** is a demonstration, not proof. Repeat the experiment 3 to 5 times (`reset` and the three phases) to talk about medians.
+- **Tic-Tac-Toe is very well known**, which reduces the advantage of the documentation in F1. The change phases (an opponent with fixed rules, pieces that move) are not the textbook game.
+- **with-ddd receives documentation and a workflow** (docs first and as the source of truth). The experiment measures the whole package, not each part separately.
+- **Bob writes the history**: its decisions are its own account, not an audit.
