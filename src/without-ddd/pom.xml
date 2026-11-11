@@ -4,8 +4,8 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>tictactoe</groupId>
-  <artifactId>tictactoe</artifactId>
+  <groupId>enrollment</groupId>
+  <artifactId>enrollment</artifactId>
   <version>1.0.0</version>
   <packaging>jar</packaging>
 
@@ -37,10 +37,16 @@
       <artifactId>junit-platform-launcher</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>com.tngtech.archunit</groupId>
+      <artifactId>archunit-junit5</artifactId>
+      <version>1.4.2</version>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 
   <build>
-    <finalName>tictactoe</finalName>
+    <finalName>enrollment</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -59,7 +65,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>tictactoe.Main</mainClass>
+              <mainClass>enrollment.Main</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -97,10 +103,10 @@
         </dependencies>
         <configuration>
           <targetClasses>
-            <param>tictactoe.*</param>
+            <param>enrollment.*</param>
           </targetClasses>
           <targetTests>
-            <param>tictactoe.*</param>
+            <param>enrollment.*</param>
           </targetTests>
           <outputFormats>
             <param>XML</param>

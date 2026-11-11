@@ -1,0 +1,171 @@
+@startuml
+' Domain model of the course enrollment system. Aggregates are packages of classes;
+' between aggregates, references are by identity (a code, a number or an ID), never by object.
+' Keep it in sync with the code: every class of enrollment.domain is here.
+' Every repository can add an element, find it by its key, list all in the order of REQUIREMENTS.md section 3
+' and remove it; only the extra queries are listed.
+
+package "enrollment.domain" {
+  class RuleViolation <<exception>> {
+    +reason(): String
+  }
+}
+
+package "enrollment.domain.access" {
+  class User <<aggregate root>> {
+    +id(): long
+    +name(): String
+    +type(): UserType
+    +studentNumber(): Optional<StudentNumber>
+    +checkPassword(String): boolean
+  }
+  enum UserType {
+    ADMIN
+    STAFF
+    STUDENT
+  }
+  class Session {
+    +user(): Optional<User>
+    +open(User)
+    +close()
+  }
+  enum Action {
+    MANAGE_USERS
+    MANAGE_SCHOOL_DATA
+    MANAGE_SECTIONS
+    MANAGE_ENROLLMENTS
+    ENROLL_SELF
+  }
+  class Permissions <<policy>> {
+    +allows(UserType, Action): boolean
+  }
+  interface UserRepository {
+    +nextId(): long
+  }
+}
+
+package "enrollment.domain.campus" {
+  class Building <<aggregate root>> {
+    +id(): BuildingId
+    +name(): String
+    +rename(String)
+    +classrooms(): List<Classroom>
+    +addClassroom(Classroom)
+    +findClassroom(int): Classroom
+    +removeClassroom(int)
+  }
+  class BuildingId <<value>>
+  class Classroom <<entity>> {
+    +number(): int
+    +capacity(): int
+    +changeCapacity(int)
+  }
+  class ClassroomRef <<value>> {
+    +buildingId: BuildingId
+    +number: int
+  }
+  interface BuildingRepository
+}
+
+package "enrollment.domain.catalog" {
+  class Course <<aggregate root>> {
+    +code(): CourseCode
+    +name(): String
+    +semester(): Semester
+    +credits(): int
+  }
+  class CourseCode <<value>>
+  class Semester <<value>>
+  interface CourseRepository
+}
+
+package "enrollment.domain.people" {
+  class Student <<aggregate root>> {
+    +number(): StudentNumber
+    +name(): String
+    +address(): String
+  }
+  class StudentNumber <<value>>
+  class Professor <<aggregate root>> {
+    +id(): ProfessorId
+    +name(): String
+    +address(): String
+  }
+  class ProfessorId <<value>>
+  interface StudentRepository
+  interface ProfessorRepository
+}
+
+package "enrollment.domain.sections" {
+  class Section <<aggregate root>> {
+    +code(): SectionCode
+    +period(): Period
+    +day(): Day
+    +course(): CourseCode
+    +classroom(): ClassroomRef
+    +professor(): ProfessorId
+    +enrollments(): List<Enrollment>
+    +hasRoom(int capacity): boolean
+    +enroll(StudentNumber, Grades, int capacity)
+    +changeGrades(StudentNumber, Grades)
+    +unenroll(StudentNumber)
+  }
+  class SectionCode <<value>>
+  class Period <<value>> {
+    +start: TimeOfDay
+    +end: TimeOfDay
+    +parse(String): Period
+  }
+  class TimeOfDay <<value>>
+  enum Day {
+    MONDAY
+    TUESDAY
+    WEDNESDAY
+    THURSDAY
+    FRIDAY
+    SATURDAY
+    SUNDAY
+    +parse(String): Day
+  }
+  class Enrollment <<entity>> {
+    +student(): StudentNumber
+    +grades(): Grades
+  }
+  class Grades <<value>> {
+    +coursework: int
+    +finalExam: int
+    +grade(): int
+  }
+  class GradeScale <<policy>> {
+    +passingGrade(): int
+    +grades(int coursework, int finalExam): Grades
+    +passed(Grades): boolean
+  }
+  class SectionChoicePolicy <<policy>> {
+    +choose(List<Section>, capacityOf): Optional<Section>
+  }
+  interface SectionRepository {
+    +ofCourse(CourseCode): List<Section>
+    +usingClassroom(ClassroomRef): List<Section>
+    +usingProfessor(ProfessorId): List<Section>
+    +enrollmentsOf(StudentNumber): List<Enrollment>
+    +enrolledSection(StudentNumber, CourseCode): Optional<Section>
+  }
+}
+
+User --> UserType
+User ..> StudentNumber : linked Student
+Session --> "0..1" User
+Permissions ..> Action
+Building *-- "0..*" Classroom
+Section *-- "0..*" Enrollment
+Section --> Period
+Section --> Day
+Section ..> CourseCode : course
+Section ..> ClassroomRef : classroom
+Section ..> ProfessorId : professor
+Enrollment --> Grades
+Enrollment ..> StudentNumber
+GradeScale ..> Grades
+SectionChoicePolicy ..> Section
+@enduml

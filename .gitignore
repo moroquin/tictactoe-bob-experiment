@@ -6,3 +6,7 @@ target/
 .DS_Store
 __pycache__/
 runs
+
+# Hidden scenarios and reference model: kept private for future runs (see README)
+scenarios/
+oracle.py

@@ -70,13 +70,25 @@ fi
 [ -f src/without-ddd/REQUIREMENTS.md ] && [ -f src/with-ddd/REQUIREMENTS.md ] && ok "src/ has both starting points" \
   || fail "src/without-ddd or src/with-ddd is incomplete"
 
+echo "Same starting point"
+# The only difference between the folders is docs/domain/ and the AGENTS.md that points to it.
+for f in REQUIREMENTS.md ARCHITECTURE.md pom.xml .gitignore src/test/java/enrollment/ArchitectureTest.java \
+         .bob/rules/00-workspace.md .bob/rules/01-autonomy.md .bob/rules/02-history.md; do
+  if cmp -s "src/without-ddd/$f" "src/with-ddd/$f"; then ok "$f"; else fail "$f differs between src/without-ddd and src/with-ddd"; fi
+done
+if python3 oracle.py check >/dev/null 2>&1; then
+  ok "the reference model reproduces the examples of the requirements and the change requests"
+else
+  fail "oracle.py check fails: the reference model and the requirements or prompts disagree"
+fi
+
 if [ "$errors" -gt 0 ]; then
   echo; echo "$errors problem(s): fix them and run scripts/init.sh again."
   exit 1
 fi
 
 echo "Experiment folders"
-if ls -d results/*/F[1-3] >/dev/null 2>&1; then
+if ls -d results/*/F[1-7] >/dev/null 2>&1; then
   echo "  results/ already holds the snapshots of a run. To archive it and start another one:"
   echo "    scripts/new_run.sh \"what with-ddd received in that run\""
   exit 1

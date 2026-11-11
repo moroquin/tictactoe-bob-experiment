@@ -22,9 +22,9 @@ for arg in "$@"; do
 done
 
 has_run=0
-if ls -d results/*/F[1-3] >/dev/null 2>&1; then
+if ls -d results/*/F[1-7] >/dev/null 2>&1; then
   has_run=1
-  phases="$(ls -d results/*/F[1-3] | xargs -n1 basename | sort -u | tr '\n' ' ')"
+  phases="$(ls -d results/*/F[1-7] | xargs -n1 basename | sort -u | tr '\n' ' ')"
   echo "results/ holds a run with phases: $phases"
   if [ -z "$description" ] && [ ! -f results/description.txt ]; then
     echo "Say what with-ddd received in this run, for example:"

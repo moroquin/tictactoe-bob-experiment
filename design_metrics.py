@@ -42,7 +42,7 @@ import sys
 from collections import defaultdict
 from pathlib import Path
 
-PROJECT = "tictactoe"
+PROJECT = "enrollment"
 MAX_LINES = 30
 MAX_PARAMS = 3
 MAX_FILE = 200
@@ -126,7 +126,7 @@ def _own(c, owner):
 
 
 def _params(desc):
-    """Parameter types of a descriptor: ['I', 'Ltictactoe/Board;', '[[C', ...]."""
+    """Parameter types of a descriptor: ['I', 'Lenrollment/domain/sections/Section;', '[[C', ...]."""
     m = re.match(r"\((.*)\)", desc or "")
     return re.findall(r"\[*(?:[BCDFIJSZ]|L[^;]+;)", m.group(1)) if m else []
 
@@ -563,10 +563,15 @@ def _method_metrics(sources):
     ms = source_methods(sources)
     long_ = sorted((m for m in ms if m["lines"] > MAX_LINES), key=lambda m: -m["lines"])
     many = sorted((m for m in ms if m["params"] > MAX_PARAMS), key=lambda m: -m["params"])
+    # A constructor that receives its collaborators (dependency injection) or every field of a record-like class
+    # is not the same smell as a method with many parameters: they are counted apart.
+    ctor = [m for m in many if m["method"] == m["class"].split(".")[-1]]
     lin = [m["lines"] for m in ms]
     return {"methods_total": len(ms),
             f"methods_>{MAX_LINES}_lines": len(long_),
             f"methods_>{MAX_PARAMS}_params": len(many),
+            f"methods_>{MAX_PARAMS}_params_without_constructors": len(many) - len(ctor),
+            f"constructors_>{MAX_PARAMS}_params": len(ctor),
             "methods_up_to_30_lines_pct": round(100 * (len(ms) - len(long_)) / len(ms)) if ms else None,
             "method_lines_median": _med(lin, 1), "method_lines_max": max(lin) if lin else None,
             "params_max": max((m["params"] for m in ms), default=None),

@@ -1,50 +1,52 @@
 # Modules
 
-## Bounded context
+## Bounded contexts
 
-Version 1 has a single bounded context, **Game**, which is the core domain. The console is an adapter around it, not part of the model.
+One application with one core and three supporting areas:
 
-## Packages
+- **Enrollment (core):** Sections and their Enrollments, the Section choice policy and the Grade scale. Most change requests land here.
+- **Catalog, campus and people (supporting):** Courses, Buildings with their Classrooms, Students and Professors. Simple data with keys and references.
+- **Access (supporting):** Users, the Session and the Permissions.
+
+## Packages and the dependency rule
+
+`ARCHITECTURE.md` fixes `enrollment` (`Main`) and `enrollment.console`, and leaves the rest free. The domain organizes the rest like this:
 
 | Package | Holds | May depend on |
 |---|---|---|
-| `tictactoe.domain` | TicTacToe, Board, Square, Coordinate, Line, Piece, Color, Player, Round, State | Only the JDK. It never reads input or prints output. |
-| `tictactoe.console` | Reading Coordinates, printing the Board and the result, following the console contract in `REQUIREMENTS.md` | `tictactoe.domain`, and only through `TicTacToe` and the value types it returns (`Coordinate`, `Color`, `State`, `Player`) |
-| `tictactoe` | `Main`: wiring only. It creates the Players and the `TicTacToe`, and hands them to the console | Both |
+| `enrollment.domain` | `RuleViolation`, the exception every layer uses to report a broken rule with its reason | Only the JDK |
+| `enrollment.domain.*` | The aggregates, value objects, policies and repository interfaces of `model.puml`, one subpackage per area: `access`, `campus`, `catalog`, `people`, `sections` | Only the JDK and other `enrollment.domain` packages |
+| `enrollment.application` | One application service per area: `AccessService`, `CampusService`, `CatalogService`, `PeopleService`, `SectionService`, `EnrollmentService`. Each use case checks Session, Permission and rules in the order of `policies.md`, then changes the aggregates. Cross-aggregate rules (references, Capacity against Enrollments, one Enrollment per Course) live here. | `enrollment.domain` |
+| `enrollment.infrastructure` | In-memory repositories, one per repository interface, built on `java.util` collections | `enrollment.domain` |
+| `enrollment.console` | Parsing Instructions (R33–R37, R40), calling the application services, and formatting the Responses and the query formats of `REQUIREMENTS.md` (see `ARCHITECTURE.md`) | `enrollment.application`, and the domain types the services return |
+| `enrollment` | `Main`: it creates the repositories, the services and the console, and starts it | All |
 
-`src/test/java/tictactoe/ArchitectureTest.java` enforces that the domain does not depend on the console and does not use `System.out`, `System.err`, `System.in`, `Scanner` or `Console`.
+The domain and the application services report a broken rule with `RuleViolation`, which carries the reason; the console turns it into `Error: <reason>`.
 
 ## File map
 
-Where each class lives. Read only the files of the classes you change and of the classes they call directly. Keep this table up to date: a class that is not here does not exist for the next session.
+Where each class lives. Read only the files of the classes you change and of the classes they call directly. Keep this table up to date: a class that is not here does not exist for the next session. The files do not exist yet; version 1 creates them here.
 
 | Class | File | Tests |
 |---|---|---|
-| `TicTacToe` | `src/main/java/tictactoe/domain/TicTacToe.java` | `src/test/java/tictactoe/domain/TicTacToeTest.java` |
-| `Board` | `src/main/java/tictactoe/domain/Board.java` | `src/test/java/tictactoe/domain/BoardTest.java` |
-| `Square` | `src/main/java/tictactoe/domain/Square.java` | `src/test/java/tictactoe/domain/SquareTest.java` |
-| `Coordinate` | `src/main/java/tictactoe/domain/Coordinate.java` | `src/test/java/tictactoe/domain/CoordinateTest.java` |
-| `Line` | `src/main/java/tictactoe/domain/Line.java` | `src/test/java/tictactoe/domain/LineTest.java` |
-| `Piece` | `src/main/java/tictactoe/domain/Piece.java` | — |
-| `Color` | `src/main/java/tictactoe/domain/Color.java` | — |
-| `Player` | `src/main/java/tictactoe/domain/Player.java` | — |
-| `Round` | `src/main/java/tictactoe/domain/Round.java` | `src/test/java/tictactoe/domain/RoundTest.java` |
-| `State` | `src/main/java/tictactoe/domain/State.java` | — |
-| Console adapter | `src/main/java/tictactoe/console/ConsoleGame.java` | — |
-| `Main` | `src/main/java/tictactoe/Main.java` | — |
-| Architecture rules | — | `src/test/java/tictactoe/ArchitectureTest.java` |
+| `User`, `UserType`, `Session`, `Action`, `Permissions`, `UserRepository` | `src/main/java/enrollment/domain/access/` | `src/test/java/enrollment/domain/access/` |
+| `Building`, `BuildingId`, `Classroom`, `ClassroomRef`, `BuildingRepository` | `src/main/java/enrollment/domain/campus/` | `src/test/java/enrollment/domain/campus/` |
+| `Course`, `CourseCode`, `Semester`, `CourseRepository` | `src/main/java/enrollment/domain/catalog/` | `src/test/java/enrollment/domain/catalog/` |
+| `Student`, `StudentNumber`, `Professor`, `ProfessorId`, `StudentRepository`, `ProfessorRepository` | `src/main/java/enrollment/domain/people/` | `src/test/java/enrollment/domain/people/` |
+| `Section`, `SectionCode`, `Period`, `TimeOfDay`, `Day`, `Enrollment`, `Grades`, `GradeScale`, `SectionChoicePolicy`, `SectionRepository` | `src/main/java/enrollment/domain/sections/` | `src/test/java/enrollment/domain/sections/` |
+| `RuleViolation` | `src/main/java/enrollment/domain/RuleViolation.java` | — |
+| Application services | `src/main/java/enrollment/application/` | `src/test/java/enrollment/application/` |
+| In-memory repositories | `src/main/java/enrollment/infrastructure/` | — |
+| Parser, dispatcher, formatter and console loop | `src/main/java/enrollment/console/` | `src/test/java/enrollment/console/` |
+| `Main` | `src/main/java/enrollment/Main.java` | — |
 
-## Responsibilities
+When a folder has several files, list each new class with its file in this table.
 
-- **Changing a game** is `TicTacToe`'s job alone (I10). `Board.put`, `Square.put` and `Round.next` are package-private.
-- **Reading a game** goes through `TicTacToe`: `state()`, `currentPlayer()` and `colorAt(Coordinate)`. No public method returns a mutable Board, Square or Round.
-- **Choosing the Coordinate of the next Put** belongs to the current Player. In version 1 every Player is a person, so the console reads that Coordinate from the input on the Player's behalf.
-- **Win and Draw** are decided by the Board (`hasWin`, `isFull`) and applied by `TicTacToe` to the State.
-- **When the domain needs something from outside** (for example, a Coordinate typed by a person), the domain declares an interface for it in `tictactoe.domain`, and `tictactoe.console` implements it. The domain never calls the console directly.
+## Where changes go
 
-## Where changes go (Open/Closed)
-
-- A new kind of Player: add a class at the Player variation point instead of editing the existing ones. No class in any package — domain, console or `Main` — asks which kind of Player it has: no `instanceof`, no type flags, no `isHuman()`-style methods. The console asks the Player or the `TicTacToe`, and the Player answers through its own behaviour.
-- A new rule of the game: change `docs/domain/` first (glossary, model, invariants, game states, decisions, this file map), then the domain classes and their tests.
-- A new way to show or read the game: change `tictactoe.console` only.
-- A new way to start the game (command-line options): change `Main` only.
+- **A rule that a policy holds** (who may do what, how a Section is chosen, the grade ranges and the Passing grade): change the policy in `policies.md`, then the policy class and its tests. The services that use it do not change.
+- **A new rule about one aggregate:** the aggregate and its invariant in `invariants.md`.
+- **A new rule that crosses aggregates** (references, limits that count Enrollments): the application service of the use case, with its invariant.
+- **A new Instruction:** the parser and the dispatcher in `enrollment.console`, a use case in the application service of its area, and the domain only if a rule of the domain changes.
+- **A new query or report format:** the formatter in `enrollment.console`, reading through the application services.
+- **A new kind of storage:** a new implementation of the repository interfaces in `enrollment.infrastructure`; nothing else changes.

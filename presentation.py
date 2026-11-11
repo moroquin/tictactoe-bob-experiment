@@ -6,8 +6,8 @@ Usage:
   python3 presentation.py other/metrics.json # only that metrics file
 
 Slides: the rules of the demo, what we measure and how, the domain model of with-ddd,
-an executive summary for each measured phase (F1, F2 and, if it exists, F3) that compares the runs,
-the failures and their cause, a conclusion with what repeats across runs and considerations
+an executive summary for each measured phase (F1 to F7) that compares the runs, charts of the evolution
+from F1 to F7 (accuracy, cost, design, tests and change) with both folders on each chart, the failures and their cause, a conclusion with what repeats across runs and considerations
 for large projects. Needs python-pptx:  pip install python-pptx
 """
 import json
@@ -17,7 +17,9 @@ from pathlib import Path
 
 try:
     from pptx import Presentation
+    from pptx.chart.data import CategoryChartData
     from pptx.dml.color import RGBColor
+    from pptx.enum.chart import XL_CHART_TYPE, XL_LABEL_POSITION, XL_LEGEND_POSITION, XL_MARKER_STYLE
     from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
     from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
     from pptx.oxml.ns import qn
@@ -127,11 +129,11 @@ def rules(prs):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     title(s, "Rules of the demo", "What makes the comparison fair and the data valid")
     cards = [
-        ("1", "Same starting point", "Same REQUIREMENTS.md, pom.xml and Bob rules. The only difference: with-ddd has docs/domain/ and an AGENTS.md that says the docs drive the development."),
+        ("1", "Same starting point", "Same REQUIREMENTS.md, ARCHITECTURE.md, pom.xml and Bob rules. The only difference: with-ddd has docs/domain/ and an AGENTS.md that says the docs drive the development."),
         ("2", "Same prompts, no help", "Each prompt is sent as is. Nobody answers Bob: it works alone, decides when information is missing and writes it down in its history."),
-        ("3", "New session per phase", "F1, F2 and F3 are new sessions, without memory. The history leaves the folder when the snapshot is taken, so it cannot serve as documentation."),
+        ("3", "New session per phase", "F1 to F7 are new sessions, without memory. The history leaves the folder when the snapshot is taken, so it cannot serve as documentation."),
         ("4", "Audited isolation", "Each folder works alone: no git, no network, no reading outside its folder. measure.py audit checks every session in Bob's database."),
-        ("5", "Hidden games", "Accuracy is decided by acceptance games Bob never sees (scenarios.tsv), with those of earlier phases as a regression test."),
+        ("5", "Hidden scenarios", "Accuracy is decided by scenarios Bob never sees (scenarios/). A reference model computes what each must output in each phase, so earlier scenarios check regressions and changed rules."),
         ("6", "External measurement", "Cost, reads, coupling, cohesion and mutants are measured by measure.py, not by Bob. One execution per folder is a demonstration, not proof."),
     ]
     w, h, gx, gy = 3.85, 2.55, 0.28, 0.28
@@ -149,15 +151,15 @@ def metrics_slide(prs):
     s = prs.slides.add_slide(prs.slide_layouts[6])
     title(s, "What we measure and how", "measure.py builds a snapshot of each phase in a temporary folder and reads Bob's sessions in ~/.bob/db/bob.db")
     rows = [
-        ("Accuracy", "Correct hidden games (JSONL log and console), regressions, tests and mutation score", "scenarios.tsv, Maven, PIT", "Higher"),
-        ("Agent cost", "Cost, max context, duration, model calls; Bobcoins per correct game", "bob.db", "Lower"),
+        ("Accuracy", "Correct hidden scenarios and expected lines, earlier phases, Bob's tests against them, mutation score", "scenarios/, oracle.py, PIT", "Higher"),
+        ("Agent cost", "Cost, max context, duration, model calls; Bobcoins per correct scenario", "bob.db", "Lower"),
         ("How it worked", "Docs and code files read before editing; whether it edited the docs first", "bob.db", "Docs first"),
         ("Coupling", "Ce · Ca · propagation cost · Yourdon & Constantine connection type", "jdeps, javap", "Lower"),
         ("Cohesion and size", "TCC, LCC, LCOM*; lines per file and method; methods > 30 lines or > 3 parameters", "javap, sources", "TCC high"),
         ("Encapsulation", "Public methods that change state; getters that let callers skip the rules", "javap", "Fewer"),
-        ("Change (F2, F3)", "Existing classes modified, lines changed, tests touched, Bobcoins per 100 lines", "diff between snapshots", "Fewer"),
+        ("Change (F2–F7)", "Existing classes modified, lines changed, tests touched, Bobcoins per 100 lines", "diff between snapshots", "Fewer"),
         ("Language", "Discarded glossary terms in the code; terms present", "glossary.md", "0 discarded"),
-        ("Autonomy", "Decisions Bob made alone and the question it would have asked", "Bob's history", "Fewer gaps"),
+        ("Autonomy", "Human interventions and questions; decisions Bob made alone and the question it would have asked", "bob.db, Bob's history", "Fewer gaps"),
     ]
     table = s.shapes.add_table(len(rows) + 1, 4, Inches(0.6), Inches(1.6), Inches(12.1), Inches(5.4)).table
     widths = [2.1, 6.4, 2.1, 1.5]
@@ -171,7 +173,7 @@ def metrics_slide(prs):
     for r in table.rows:
         r.height = Inches(0.54)
     notes(s, "Ce (efferent coupling): how many project classes a class uses. Ca (afferent): how many use it; "
-             "high is only fine for stable classes, such as an enum. Propagation cost: share of the system a change can reach. "
+             "high is only fine for stable classes, such as a value object. Propagation cost: share of the system a change can reach. "
              "Yourdon & Constantine: data, stamp, control, external, common or content connection, from best to worst. "
              "TCC and LCC: share of method pairs that share fields. Mutation score: PIT plants small bugs in the code and counts how many the tests detect.")
 
@@ -208,25 +210,26 @@ def uml_class(slide, x, y, w, name, members, stereotype=None, root=False):
 
 def model(prs):
     s = prs.slides.add_slide(prs.slide_layouts[6])
-    title(s, "The domain model of with-ddd", "src/with-ddd/docs/domain/model.puml: classes, responsibilities and who can change the game")
-    W = 2.75
-    player = uml_class(s, 0.6, 1.55, W, "Player", ["+ color(): Color"])
-    color = uml_class(s, 0.6, 3.55, W, "Color", ["X · O · EMPTY"], "enum")
-    piece = uml_class(s, 0.6, 5.55, W, "Piece", ["+ color(): Color"])
-    ttt = uml_class(s, 3.85, 1.55, 3.2, "TicTacToe", ["+ put(Coordinate): boolean", "+ state(): State", "+ currentPlayer(): Player",
-                                                      "+ colorAt(Coordinate): Color"], "aggregate root", root=True)
-    board = uml_class(s, 3.85, 3.85, 3.2, "Board", ["+ colorAt · isEmpty · isFull", "+ hasWin(Color): boolean", "~ put(Coordinate, Piece)"])
-    square = uml_class(s, 3.85, 5.55, 3.2, "Square", ["+ coordinate() · color() · isEmpty()", "~ put(Piece)"])
-    rnd = uml_class(s, 7.55, 1.55, W, "Round", ["+ current(): Player", "~ next()"])
-    line = uml_class(s, 7.55, 3.55, W, "Line", ["+ row(n) · column(n)", "+ diagonal() · inverseDiagonal()", "+ all(): 8 Lines"], "value")
-    coord = uml_class(s, 7.55, 5.55, W, "Coordinate", ["+ row() · column(): 1..3", "+ all(): reading order"], "value")
-    uml_class(s, 10.6, 1.55, 2.15, "State", ["X_TO_PUT · O_TO_PUT", "X_WINS · O_WINS", "DRAW · isOver()"], "enum")
-    # Outside the domain
-    box(s, 10.6, 3.55, 2.15, 3.35, fill=None, line=GREY, dash=True, radius=0.05)
-    text(s, 10.75, 3.65, 1.9, 3.2, [[("Outside the domain", {"bold": True, "color": BLUE, "font": TITLE_FONT, "size": 14})],
-                                    "console: reads and writes; only talks to TicTacToe",
-                                    "Main: creates the Players and the game",
-                                    [("~ = only inside the domain package (invariant I10)", {"color": ORANGE, "size": 11})]], size=12)
+    title(s, "The domain model of with-ddd", "src/with-ddd/docs/domain/: aggregates, policies and references by identity")
+    W = 2.85
+    section = uml_class(s, 0.6, 1.55, 3.3, "Section", ["+ period · day", "+ course: CourseCode", "+ classroom: ClassroomRef",
+                                                       "+ professor: ProfessorId", "+ hasRoom(capacity)", "+ enroll · changeGrades · unenroll"],
+                        "aggregate root", root=True)
+    enrollment = uml_class(s, 0.6, 4.35, 3.3, "Enrollment", ["+ student: StudentNumber", "+ grades: Grades"], "entity")
+    grades = uml_class(s, 0.6, 5.75, 3.3, "Grades", ["+ coursework · finalExam", "+ grade()"], "value")
+    building = uml_class(s, 4.35, 1.55, W, "Building", ["+ id: BuildingId · name", "+ classrooms"], "aggregate root", root=True)
+    classroom = uml_class(s, 4.35, 3.0, W, "Classroom", ["+ number · capacity"], "entity")
+    course = uml_class(s, 4.35, 4.35, W, "Course", ["+ code · name", "+ semester · credits"], "aggregate root", root=True)
+    people = uml_class(s, 4.35, 5.75, W, "Student · Professor", ["+ number / id · name", "+ address"], "aggregate roots", root=True)
+    user = uml_class(s, 7.6, 1.55, W, "User", ["+ id · name · type", "+ studentNumber"], "aggregate root", root=True)
+    uml_class(s, 7.6, 3.0, W, "Session", ["+ user: at most one"])
+    policies = uml_class(s, 7.6, 4.35, W, "Policies", ["Permissions", "SectionChoicePolicy", "GradeScale"], "policy")
+    box(s, 10.75, 1.55, 1.95, 5.4, fill=None, line=GREY, dash=True, radius=0.05)
+    text(s, 10.88, 1.65, 1.75, 5.2, [[("Layers", {"bold": True, "color": BLUE, "font": TITLE_FONT, "size": 14})],
+                                     "domain: aggregates, values, policies, repository interfaces",
+                                     "application: one service per area; checks session, permission and rules, then changes",
+                                     "infrastructure: in-memory repositories",
+                                     [("console and Main: ARCHITECTURE.md, the same in both folders", {"color": ORANGE, "size": 11})]], size=12)
 
     def cx(b):
         return b[0] + b[2] / 2
@@ -234,25 +237,17 @@ def model(prs):
     def bottom(b):
         return b[1] + b[3]
 
-    # Relations: diamond = composition, arrow = association, dashes = uses
-    arrow(s, cx(ttt), bottom(ttt), cx(board), board[1], head=None, tail="diamond")          # TicTacToe ◆— Board
-    arrow(s, ttt[0] + ttt[2], 1.95, rnd[0], 1.95, head=None, tail="diamond")               # TicTacToe ◆— Round
-    arrow(s, ttt[0], 1.95, player[0] + player[2], 1.95, head="triangle")                  # TicTacToe → Player (2)
-    text(s, player[0] + player[2] + 0.05, 1.6, 0.4, 0.3, "2", size=11, color=GREY)
-    arrow(s, cx(board), bottom(board), cx(square), square[1], head=None, tail="diamond")    # Board ◆— Square (9)
-    text(s, cx(square) + 0.08, square[1] - 0.3, 0.4, 0.3, "9", size=11, color=GREY)
-    arrow(s, square[0], square[1] + 0.45, piece[0] + piece[2], piece[1] + 0.45, head="triangle")  # Square → Piece 0..1
-    text(s, piece[0] + piece[2] + 0.05, piece[1] + 0.12, 0.6, 0.3, "0..1", size=11, color=GREY)
-    arrow(s, square[0] + square[2], square[1] + 0.45, coord[0], coord[1] + 0.45, head="triangle")  # Square → Coordinate
-    arrow(s, board[0] + board[2], board[1] + 0.6, line[0], line[1] + 0.9, head="triangle", dash=True)  # Board ..> Line
-    arrow(s, cx(line), bottom(line), cx(coord), coord[1], head="triangle")                  # Line → Coordinate (3)
-    text(s, cx(coord) + 0.08, coord[1] - 0.3, 0.4, 0.3, "3", size=11, color=GREY)
-    arrow(s, cx(player), bottom(player), cx(color), color[1], head="triangle")              # Player → Color
-    arrow(s, cx(piece), piece[1], cx(color), bottom(color), head="triangle")                # Piece → Color
-    notes(s, "Diamond: composition. Solid arrow: association. Dashes: uses. Round alternates the two Players (current) and TicTacToe keeps the State (state()). TicTacToe is the aggregate root: "
-             "it is the only one that changes the game (I10); Board, Square and Round have their mutators inside the package. "
-             "A Piece does not keep its Coordinate: its position is the Square that holds it (D7). "
-             "Goal and Put from the original diagram are not classes in version 1 (D5, D6).")
+    arrow(s, cx(section), bottom(section), cx(enrollment), enrollment[1], head=None, tail="diamond")   # Section ◆— Enrollment
+    arrow(s, cx(enrollment), bottom(enrollment), cx(grades), grades[1], head="triangle")               # Enrollment → Grades
+    arrow(s, cx(building), bottom(building), cx(classroom), classroom[1], head=None, tail="diamond")   # Building ◆— Classroom
+    arrow(s, section[0] + section[2], 2.2, classroom[0], classroom[1] + 0.3, head="triangle", dash=True)  # by identity
+    arrow(s, section[0] + section[2], 3.2, course[0], course[1] + 0.3, head="triangle", dash=True)
+    arrow(s, enrollment[0] + enrollment[2], enrollment[1] + 0.4, people[0], people[1] + 0.3, head="triangle", dash=True)
+    arrow(s, cx(user), bottom(user), cx(user), 3.0, head="triangle")                                    # Session → User
+    arrow(s, policies[0], policies[1] + 0.4, section[0] + section[2], 3.9, head="triangle", dash=True)
+    notes(s, "Diamond: composition inside an aggregate. Dashed arrow: a reference by identity (a code, a number or an ID) or a use. "
+             "The policies hold the rules most likely to change: who may do what, how a Section is chosen and the grade scale. "
+             "Change requests CR-3 and CR-4 change exactly two of them.")
 
 
 def large_projects(prs):
@@ -273,7 +268,7 @@ def large_projects(prs):
         text(s, x + 0.25, y + 0.22, w - 0.5, 0.45, t, size=17, bold=True, color=TEAL if i else ORANGE, font=TITLE_FONT)
         text(s, x + 0.25, y + 0.75, w - 0.5, h - 0.9, d, size=15)
     notes(s, "Security comes first: in this experiment the agent runs commands without human approval, "
-             "so the permissions deny git, curl, wget, env and printenv, and the audit checks every session.")
+             "so the permissions deny git, curl, wget, env, printenv and the shell commands that read files, and the audit checks every session.")
 
 
 # ---------------------------------------------------------------- summary per phase (one or several runs)
@@ -299,17 +294,17 @@ def _num(v):
 
 # (label, key or function, better: "max" | "min" | None)
 PHASE_ROWS = [
-    ("Correct according to the log", "acceptance_log", "max"),
-    ("Exact console", "acceptance", "max"),
-    ("  · with the correct logic", "acceptance_logic", "max"),
-    ("Console = log", "console_matches_log", "max"),
+    ("Hidden scenarios correct", "acceptance", "max"),
+    ("Expected lines matched", "acceptance_lines", "max"),
+    ("Earlier phases still correct", "regressions", "max"),
     ("Mutation score without console (%)", "mutation_score_no_io", "max"),
+    ("Escapes (scenarios failing, suite green)", "test_escapes", "min"),
     ("Cost", "cost_bobcoins", "min"),
     ("Max context (k tokens)", "context_k", "min"),
     ("Duration (s)", "duration_s", "min"),
     ("Code read before editing", "code_read_before_edit", "min"),
     ("Classes · lines", lambda r: f"{_v(r, 'classes')} · {_v(r, 'loc_main')}", None),
-    ("Bobcoins per game (correct logic)", "cost_per_game_logic", "min"),
+    ("Bobcoins per correct scenario", "cost_per_scenario", "min"),
     ("Methods > 30 lines · > 3 parameters", lambda r: None if _v(r, "methods_total") is None else f"{_v(r, 'methods_>30_lines')} · {_v(r, 'methods_>3_params')}", None),
     ("Ce max", "Ce_max", "min"),
     ("Propagation cost (%)", "propagation_cost", "min"),
@@ -321,10 +316,13 @@ PHASE_ROWS = [
     ("Existing classes modified", "modified_classes", "min"),
     ("Lines changed in existing", "lines_changed_in_existing", "min"),
     ("Bobcoins per 100 lines touched", "cost_per_100_lines_touched", "min"),
+    ("Human interventions · questions", lambda r: None if _v(r, "interventions") is None else f"{_v(r, 'interventions')} · {_v(r, 'questions_to_user')}", None),
     ("Doc gaps (gap + ambiguity)", lambda r: None if _v(r, "decisions") is None else (_v(r, "dec_gap") or 0) + (_v(r, "dec_ambiguity") or 0), "min"),
     ("Discarded terms", "discarded_terms", "min"),
 ]
-NAMES = {"F1": "F1 · build the game", "F2": "F2 · CR-1: play against the PC", "F3": "F3 · CR-2: three pieces that move"}
+NAMES = {"F1": "F1 · build version 1", "F2": "F2 · CR-1: modify and delete sections", "F3": "F3 · CR-2: load a file and reports",
+         "F4": "F4 · CR-3: balanced sections", "F5": "F5 · CR-4: new grade scale", "F6": "F6 · CR-5: prerequisites and credits",
+         "F7": "F7 · CR-6: time conflicts"}
 WITH, WITHOUT = "with DDD", "without DDD"
 
 
@@ -434,8 +432,8 @@ def findings(phase, available):
     h = []
     def per_run(fn):
         return " · ".join(f"{n}: {fn(d['without-ddd'][phase], d['with-ddd'][phase])}" for n, d in available)
-    h.append(("Accuracy", per_run(lambda a, b: f"without {a.get('acceptance_log') or a.get('acceptance')} ({a.get('acceptance_logic', '?')} logic), "
-                                                f"with {b.get('acceptance_log') or b.get('acceptance')}")
+    h.append(("Accuracy", per_run(lambda a, b: f"scenarios without {a.get('acceptance')}, with {b.get('acceptance')}; "
+                                                f"earlier phases without {a.get('regressions') or '—'}, with {b.get('regressions') or '—'}")
               + _failures(phase, available)))
     h.append(("Cost", per_run(lambda a, b: f"with DDD {(_num(b.get('cost_bobcoins')) or 0) / (_num(a.get('cost_bobcoins')) or 1):.1f}× "
                                            f"({b.get('cost_bobcoins')} vs {a.get('cost_bobcoins')})")))
@@ -545,6 +543,181 @@ def failures_slide(prs):
     notes(s, " ".join(fl.get("note", "") for fl in failures))
 
 
+
+# ---------------------------------------------------------------- charts F1..F7, both folders on each one
+def _series(d, folder, phases, key):
+    """Values of one folder per phase; key is a metrics.json key or a function of the phase's metrics."""
+    out = []
+    for f in phases:
+        r = d.get(folder, {}).get(f)
+        v = None if not r else (key(r) if callable(key) else _num(r.get(key)))
+        out.append(None if v is None else round(float(v), 3))
+    return out
+
+
+def _pct(k):
+    return lambda r: None if _num(r.get(k)) is None else 100 * _num(r.get(k))
+
+
+def _cumulative(values):
+    out, total = [], 0.0
+    for v in values:
+        total += v or 0
+        out.append(round(total, 2) if v is not None else None)
+    return out
+
+
+def chart(slide, x, y, w, h, heading, hint, phases, series, kind="line", fmt="0", vmin=None, vmax=None):
+    """A native (editable) PowerPoint chart: phases on the x axis, one series per folder."""
+    text(slide, x, y, w, 0.35, heading, size=16, bold=True, color=BLUE, font=TITLE_FONT)
+    text(slide, x, y + 0.36, w, 0.3, hint, size=11, color=GREY)
+    data = CategoryChartData(number_format=fmt)
+    data.categories = phases
+    for name, values in series:
+        data.add_series(name, values)
+    ctype = XL_CHART_TYPE.LINE_MARKERS if kind == "line" else XL_CHART_TYPE.COLUMN_CLUSTERED
+    ch = slide.shapes.add_chart(ctype, Inches(x), Inches(y + 0.7), Inches(w), Inches(h - 0.7), data).chart
+    ch.font.size = Pt(11)
+    ch.font.name = BODY_FONT
+    ch.has_legend = True
+    ch.legend.position = XL_LEGEND_POSITION.BOTTOM
+    ch.legend.include_in_layout = False
+    va = ch.value_axis
+    va.has_major_gridlines = True
+    va.major_gridlines.format.line.color.rgb = LINE
+    va.format.line.fill.background()
+    va.tick_labels.number_format = fmt
+    va.tick_labels.number_format_is_linked = False
+    if vmin is not None:
+        va.minimum_scale = vmin
+    if vmax is not None:
+        va.maximum_scale = vmax
+    ch.category_axis.format.line.color.rgb = LINE
+    colors = {WITHOUT: ORANGE, WITH: TEAL}
+    for i, ser in enumerate(ch.plots[0].series):
+        color = colors.get(ser.name, GREY)
+        if kind == "line":
+            ser.smooth = False
+            ser.format.line.color.rgb = color
+            ser.format.line.width = Pt(2.75)
+            ser.marker.style = XL_MARKER_STYLE.CIRCLE
+            ser.marker.size = 8
+            ser.marker.format.fill.solid()
+            ser.marker.format.fill.fore_color.rgb = color
+            ser.marker.format.line.color.rgb = WHITE
+        else:
+            ser.format.fill.solid()
+            ser.format.fill.fore_color.rgb = color
+        dl = ser.data_labels
+        dl.show_value = True
+        dl.number_format = fmt
+        dl.number_format_is_linked = False
+        dl.font.size = Pt(9)
+        dl.font.color.rgb = color
+        if kind == "line":
+            dl.position = XL_LABEL_POSITION.ABOVE if i else XL_LABEL_POSITION.BELOW
+        else:
+            dl.position = XL_LABEL_POSITION.OUTSIDE_END
+    if kind != "line":
+        ch.plots[0].gap_width = 60
+        ch.plots[0].overlap = -10
+    return ch
+
+
+def _last(values):
+    return next((v for v in reversed(values) if v is not None), None)
+
+
+def _fmt(v, nd=0):
+    return "no data" if v is None else f"{v:.{nd}f}"
+
+
+def chart_slide(prs, heading, sub, left, right, takeaway, phases):
+    """left/right: (heading, hint, series, kind, fmt, vmin, vmax)."""
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    title(s, heading, sub)
+    for x, spec in ((0.6, left), (6.85, right)):
+        h, hint, series, kind, fmt, vmin, vmax = spec
+        chart(s, x, 1.55, 5.85, 4.75, h, hint, phases, series, kind, fmt, vmin, vmax)
+    box(s, 0.6, 6.45, 12.1, 0.7, fill=LIGHT)
+    text(s, 0.8, 6.45, 11.7, 0.7, takeaway, size=13, color=INK, anchor=MSO_ANCHOR.MIDDLE)
+    notes(s, "Native PowerPoint charts (right click > Edit data to see the numbers). Data from metrics.json, generated by "
+             "measure.py; one execution per folder. " + takeaway)
+    return s
+
+
+def chart_slides(prs, runs, phases):
+    """Evolution F1..F7 of the last run with data: accuracy, cost, design, tests and change."""
+    valid = [(n, d) for n, _, d in runs if d]
+    if not valid:
+        return
+    name, d = valid[-1]
+    ph = [f for f in phases if d.get("without-ddd", {}).get(f) or d.get("with-ddd", {}).get(f)]
+    if not ph:
+        return
+    tag = f" ({name})" if len(valid) > 1 else ""
+
+    def both(key):
+        return [(WITHOUT, _series(d, "without-ddd", ph, key)), (WITH, _series(d, "with-ddd", ph, key))]
+
+    def ends(series, nd=0, unit=""):
+        return ", ".join(f"{n} {_fmt(_last(v), nd)}{unit}" for n, v in series)
+
+    # 1. Accuracy
+    sc, ln = both(_pct("acceptance")), both("acceptance_lines_pct")
+    ok = {c: _series(d, c, ph, lambda r: (_num(r.get("acceptance")) or 0) * int(str(r.get("acceptance", "0/0")).split("/")[1] or 0))
+          for c in ("without-ddd", "with-ddd")}
+    chart_slide(prs, "Accuracy from F1 to F7" + tag,
+                "The hidden scenarios that exist in each phase, with what the reference model expects in that phase",
+                ("Hidden scenarios correct (%)", "A scenario is correct only if every line of its output is", sc, "line", "0", 0, 100),
+                ("Expected lines matched (%)", "How close the output is, even when a scenario fails", ln, "line", "0.0", None, 100),
+                f"Last phase ({ph[-1]}): scenarios correct {ends(sc, 0, ' %')}; expected lines {ends(ln, 1, ' %')}. "
+                f"Correct scenarios summed over the phases: {WITHOUT} {sum(v or 0 for v in ok['without-ddd']):.0f}, "
+                f"{WITH} {sum(v or 0 for v in ok['with-ddd']):.0f}.", ph)
+
+    # 2. Cost
+    cost = both("cost_bobcoins")
+    cum = [(n, _cumulative(v)) for n, v in cost]
+    tot = {n: _last(v) for n, v in cum}
+    good = {n: sum(v or 0 for v in ok[c]) for n, c in ((WITHOUT, "without-ddd"), (WITH, "with-ddd"))}
+    per = ", ".join(f"{n} {tot[n] / good[n]:.2f}" if good[n] and tot[n] else f"{n} no data" for n in (WITHOUT, WITH))
+    chart_slide(prs, "Agent cost from F1 to F7" + tag, "Bobcoins measured in the Bob Shell database, one session per phase",
+                ("Bobcoins per phase", "Lower is better", cost, "column", "0.0", 0, None),
+                ("Cumulative Bobcoins", "What the whole project has cost up to each phase", cum, "line", "0.0", 0, None),
+                f"Total: {WITHOUT} {_fmt(tot[WITHOUT], 2)}, {WITH} {_fmt(tot[WITH], 2)} Bobcoins. "
+                f"Bobcoins per correct scenario over all phases: {per}.", ph)
+
+    # 3. Design
+    pc, tcc = both("propagation_cost"), both("TCC_median")
+    chart_slide(prs, "Design from F1 to F7" + tag, "Does the design degrade as the change requests arrive?",
+                ("Propagation cost (%)", "Share of classes a change can reach. Lower is better", pc, "line", "0.0", 0, None),
+                ("Cohesion: TCC median", "Share of method pairs that use the same fields. Higher is better", tcc, "line", "0.00", 0, 1),
+                f"Last phase ({ph[-1]}): propagation cost {ends(pc, 1, ' %')}; TCC {ends(tcc, 2)}. "
+                f"Classes: {ends(both('classes'))}; production lines: {ends(both('loc_main'))}.", ph)
+
+    # 4. Tests
+    mut, esc = both("mutation_score_no_io"), both("test_escapes")
+    chart_slide(prs, "Bob's tests from F1 to F7" + tag, "Its suite was always green: do its tests catch what the hidden scenarios catch?",
+                ("Mutation score without the console (%)", "Mutants of the domain that the suite kills. Higher is better", mut, "line", "0", 0, 100),
+                ("Escapes", "Hidden scenarios that fail while Bob's suite is green. Lower is better", esc, "column", "0", 0, None),
+                f"Last phase ({ph[-1]}): mutation score {ends(mut, 0, ' %')}; escapes {ends(esc)}. A high mutation score with many "
+                "escapes means the tests check the code Bob wrote, not the behaviour that was asked.", ph)
+
+    # 5. Change (F2 onwards)
+    chg = ph[1:]
+    if chg:
+        mod = [(n, _series(d, c, chg, "modified_classes")) for n, c in ((WITHOUT, "without-ddd"), (WITH, "with-ddd"))]
+        lines = [(n, _series(d, c, chg, "lines_changed_in_existing")) for n, c in ((WITHOUT, "without-ddd"), (WITH, "with-ddd"))]
+        s = {n: sum(v or 0 for v in vals) for n, vals in mod}
+        l = {n: sum(v or 0 for v in vals) for n, vals in lines}
+        chart_slide(prs, "Cost of each change" + tag, "F2 to F7: what each change request touched in the code that already existed",
+                    ("Existing classes modified", "Fewer means the change stayed in one place", mod, "column", "0", 0, None),
+                    ("Lines changed in existing classes", "Added, changed and deleted lines in classes of the previous phase", lines, "column", "0", 0, None),
+                    f"In all change requests: existing classes modified {WITHOUT} {s[WITHOUT]:.0f}, {WITH} {s[WITH]:.0f}; "
+                    f"lines changed {WITHOUT} {l[WITHOUT]:.0f}, {WITH} {l[WITH]:.0f}. Compare with the number of classes "
+                    "on the design slide: the same change touches a different share of each design.", chg)
+
+
 # ---------------------------------------------------------------- main
 def load_runs():
     """The runs archived in runs/<name>/ and the current one in results/, in that order.
@@ -564,7 +737,7 @@ def load_runs():
 
 def main():
     runs = load_runs()
-    phases = sorted({f for _, _, d in runs for c in d.values() for f in c} | {"F1", "F2"})
+    phases = sorted({f for _, _, d in runs for c in d.values() for f in c} | {"F1"}, key=lambda f: int(f[1:]))
     prs = Presentation()
     prs.slide_width, prs.slide_height = Inches(13.333), Inches(7.5)
     rules(prs)
@@ -572,6 +745,7 @@ def main():
     model(prs)
     for f in phases:
         phase_slide(prs, f, runs)
+    chart_slides(prs, runs, phases)
     failures_slide(prs)
     conclusion_slide(prs, phases, runs)
     large_projects(prs)

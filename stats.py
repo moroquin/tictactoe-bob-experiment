@@ -33,23 +33,25 @@ FOLDERS = ["without-ddd", "with-ddd"]
 # (label, key or function, better: "max" | "min" | None)
 METRICS = [
     ("Accuracy", None, None),
-    ("Correct games according to the JSONL log (%)", "acceptance_log", "max"),
-    ("Games with every move valid (%)", "valid_moves", "max"),
-    ("Console: games with the exact output (%)", "acceptance", "max"),
-    ("Console: with the correct logic (%)", "acceptance_logic", "max"),
-    ("Console: shows the same board as the log (%)", "console_matches_log", "max"),
+    ("Hidden scenarios correct (%)", "acceptance", "max"),
+    ("Expected lines matched (%)", "acceptance_lines", "max"),
+    ("Scenarios of earlier phases still correct (%)", "regressions", "max"),
     ("Mutation score without the console (%)", "mutation_score_no_io", "max"),
+    ("Bob's tests that pass (%)", "tests_passed_pct", "max"),
+    ("Bob's suite agrees with the hidden scenarios (%)", "suite_right", "max"),
+    ("Escapes: hidden scenarios failing with the suite green", "test_escapes", "min"),
     ("Cost and efficiency", None, None),
     ("Bobcoins", "cost_bobcoins", "min"),
     ("Time (s)", "duration_s", "min"),
     ("Max context (k tokens)", "context_k", "min"),
     ("Model calls", "model_calls", "min"),
-    ("Bobcoins per correct game", "cost_per_game", "min"),
-    ("Seconds per correct game", "seconds_per_game", "min"),
-    ("Bobcoins per game with the correct logic", "cost_per_game_logic", "min"),
-    ("Bobcoins per correct game according to the log", "cost_per_game_log", "min"),
+    ("Bobcoins per correct scenario", "cost_per_scenario", "min"),
+    ("Seconds per correct scenario", "seconds_per_scenario", "min"),
     ("How Bob worked", None, None),
     ("Code read before editing", "code_read_before_edit", "min"),
+    ("Human interventions", "interventions", "min"),
+    ("Questions to the user", "questions_to_user", "min"),
+    ("Denied commands it tried", "denied_commands", "min"),
     ("Own decisions", "decisions", "min"),
     ("  · gaps or ambiguities", lambda r: (r.get("dec_gap", 0) + r.get("dec_ambiguity", 0)) if "decisions" in r else None, "min"),
     ("Size", None, None),
@@ -59,6 +61,7 @@ METRICS = [
     ("Files with more than 200 lines", "files_>200_lines", "min"),
     ("Methods with more than 30 lines", "methods_>30_lines", "min"),
     ("Methods with more than 3 parameters", "methods_>3_params", "min"),
+    ("  · without constructors", "methods_>3_params_without_constructors", "min"),
     ("Coupling and cohesion", None, None),
     ("Ce max", "Ce_max", "min"),
     ("Propagation cost (%)", "propagation_cost", "min"),
@@ -69,7 +72,7 @@ METRICS = [
     ("LCOM* median", "LCOM*_median", "min"),
     ("Public methods that change state", lambda r: len(r["public_mutators"]) if "public_mutators" in r else None, "min"),
     ("Getters that expose state", lambda r: len(r["state_leaks"]) if "state_leaks" in r else None, "min"),
-    ("Change (F2 and F3)", None, None),
+    ("Change (F2 onwards)", None, None),
     ("Existing classes modified", "modified_classes", "min"),
     ("Lines changed in existing classes", "lines_changed_in_existing", "min"),
     ("Existing tests touched", "existing_tests_touched", "min"),
@@ -82,14 +85,14 @@ METRICS = [
 DESIGN = [("Lines", "loc_main"), ("Ce max", "Ce_max"), ("Propagation cost", "propagation_cost"),
           ("Y&C index", "yc_index"), ("TCC median", "TCC_median"), ("LCOM* median", "LCOM*_median"),
           ("Methods > 30 lines", "methods_>30_lines"), ("Lines per file max", "file_lines_max")]
-OUTCOME = [("Correct according to the log %", "acceptance_log"), ("Exact console %", "acceptance"), ("Correct logic %", "acceptance_logic"),
+OUTCOME = [("Scenarios correct %", "acceptance"), ("Expected lines matched %", "acceptance_lines"),
            ("Mutation score %", "mutation_score_no_io"), ("Bobcoins", "cost_bobcoins"), ("Time", "duration_s")]
 
 
 def num(v):
     """'11/12' -> 91.7 (%), numbers -> float, lists -> length; None when it cannot."""
-    if isinstance(v, bool):
-        return float(v)
+    if isinstance(v, bool):  # yes/no as a percentage, so that the median across runs reads as "% of runs"
+        return 100.0 * v
     if isinstance(v, (int, float)):
         return float(v)
     if isinstance(v, list):
@@ -256,8 +259,8 @@ def main():
 
     # Efficiency and scalability: medians per phase, to see the trend while the system grows
     md += ["## Efficiency and scalability (medians across runs)", "",
-           "A design that scales grows in lines without growing its propagation cost, its coupling or the cost of each change, and without losing correct games.", "",
-           "| Folder | Phase | n | Lines | Propagation cost (%) | Y&C index | TCC | Correct games (%) | Bobcoins | Bobcoins per game (correct logic) | Bobcoins per 100 lines touched |",
+           "A design that scales grows in lines without growing its propagation cost, its coupling or the cost of each change, and without losing correct scenarios.", "",
+           "| Folder | Phase | n | Lines | Propagation cost (%) | Y&C index | TCC | Scenarios correct (%) | Bobcoins | Bobcoins per scenario | Bobcoins per 100 lines touched |",
            "|---|---|---|---|---|---|---|---|---|---|---|"]
     for c in FOLDERS:
         for phase in phases:
@@ -265,9 +268,9 @@ def main():
             if not rs:
                 continue
             med = lambda k: f((describe([value(r, k) for r in rs]) or {}).get("median"))
-            correct = med("acceptance_log") if any(r.get("acceptance_log") for r in rs) else med("acceptance")
+            correct = med("acceptance")
             md.append(f"| {c} | {phase} | {len(rs)} | {med('loc_main')} | {med('propagation_cost')} | {med('yc_index')} | {med('TCC_median')} "
-                      f"| {correct} | {med('cost_bobcoins')} | {med('cost_per_game_logic')} | {med('cost_per_100_lines_touched')} |")
+                      f"| {correct} | {med('cost_bobcoins')} | {med('cost_per_scenario')} | {med('cost_per_100_lines_touched')} |")
     md.append("")
 
     # Correlations: each point is one run × phase × folder

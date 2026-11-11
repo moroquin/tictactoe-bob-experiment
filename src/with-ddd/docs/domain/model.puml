@@ -1,92 +1,169 @@
 @startuml
-' Domain model, version 1. Adapted from the team's domain diagram (harness/reference/model-original.png):
-' decisions D5 to D8 in decisions.md explain every difference.
-' Members marked ~ are package-private: only classes in tictactoe.domain call them.
-title Tic-Tac-Toe — domain model (version 1)
+' Domain model of the course enrollment system. Aggregates are packages of classes;
+' between aggregates, references are by identity (a code, a number or an ID), never by object.
+' Keep it in sync with the code: every class of enrollment.domain is here.
+' Every repository can add an element, find it by its key, list all in the order of REQUIREMENTS.md section 3
+' and remove it; only the extra queries are listed.
 
-class TicTacToe <<aggregate root>> {
-  +TicTacToe(playerX: Player, playerO: Player)
-  +put(coordinate: Coordinate): boolean
-  +state(): State
-  +currentPlayer(): Player
-  +colorAt(coordinate: Coordinate): Color
-}
-note right of TicTacToe
-  put() returns false and changes nothing
-  when the Square is occupied (I3).
-  It is the only public operation that
-  changes a game (I10).
-end note
-
-class Board {
-  +colorAt(coordinate: Coordinate): Color
-  +isEmpty(coordinate: Coordinate): boolean
-  +isFull(): boolean
-  +hasWin(color: Color): boolean
-  ~put(coordinate: Coordinate, piece: Piece)
+package "enrollment.domain" {
+  class RuleViolation <<exception>> {
+    +reason(): String
+  }
 }
 
-class Square {
-  +coordinate(): Coordinate
-  +color(): Color
-  +isEmpty(): boolean
-  ~put(piece: Piece)
+package "enrollment.domain.access" {
+  class User <<aggregate root>> {
+    +id(): long
+    +name(): String
+    +type(): UserType
+    +studentNumber(): Optional<StudentNumber>
+    +checkPassword(String): boolean
+  }
+  enum UserType {
+    ADMIN
+    STAFF
+    STUDENT
+  }
+  class Session {
+    +user(): Optional<User>
+    +open(User)
+    +close()
+  }
+  enum Action {
+    MANAGE_USERS
+    MANAGE_SCHOOL_DATA
+    MANAGE_SECTIONS
+    MANAGE_ENROLLMENTS
+    ENROLL_SELF
+  }
+  class Permissions <<policy>> {
+    +allows(UserType, Action): boolean
+  }
+  interface UserRepository {
+    +nextId(): long
+  }
 }
 
-class Round {
-  +current(): Player
-  ~next()
+package "enrollment.domain.campus" {
+  class Building <<aggregate root>> {
+    +id(): BuildingId
+    +name(): String
+    +rename(String)
+    +classrooms(): List<Classroom>
+    +addClassroom(Classroom)
+    +removeClassroom(int)
+  }
+  class BuildingId <<value>>
+  class Classroom <<entity>> {
+    +number(): int
+    +capacity(): int
+    +changeCapacity(int)
+  }
+  class ClassroomRef <<value>> {
+    +buildingId: BuildingId
+    +number: int
+  }
+  interface BuildingRepository
 }
 
-class Player {
-  +color(): Color
+package "enrollment.domain.catalog" {
+  class Course <<aggregate root>> {
+    +code(): CourseCode
+    +name(): String
+    +semester(): Semester
+    +credits(): int
+  }
+  class CourseCode <<value>>
+  class Semester <<value>>
+  interface CourseRepository
 }
 
-class Piece {
-  +color(): Color
+package "enrollment.domain.people" {
+  class Student <<aggregate root>> {
+    +number(): StudentNumber
+    +name(): String
+    +address(): String
+  }
+  class StudentNumber <<value>>
+  class Professor <<aggregate root>> {
+    +id(): ProfessorId
+    +name(): String
+    +address(): String
+  }
+  class ProfessorId <<value>>
+  interface StudentRepository
+  interface ProfessorRepository
 }
 
-class Coordinate <<value object>> {
-  +row(): int
-  +column(): int
-  +{static} all(): List<Coordinate>
+package "enrollment.domain.sections" {
+  class Section <<aggregate root>> {
+    +code(): SectionCode
+    +period(): Period
+    +day(): Day
+    +course(): CourseCode
+    +classroom(): ClassroomRef
+    +professor(): ProfessorId
+    +enrollments(): List<Enrollment>
+    +hasRoom(int capacity): boolean
+    +enroll(StudentNumber, Grades, int capacity)
+    +changeGrades(StudentNumber, Grades)
+    +unenroll(StudentNumber)
+  }
+  class SectionCode <<value>>
+  class Period <<value>> {
+    +start: TimeOfDay
+    +end: TimeOfDay
+    +parse(String): Period
+  }
+  class TimeOfDay <<value>>
+  enum Day {
+    MONDAY
+    TUESDAY
+    WEDNESDAY
+    THURSDAY
+    FRIDAY
+    SATURDAY
+    SUNDAY
+    +parse(String): Day
+  }
+  class Enrollment <<entity>> {
+    +student(): StudentNumber
+    +grades(): Grades
+  }
+  class Grades <<value>> {
+    +coursework: int
+    +finalExam: int
+    +grade(): int
+  }
+  class GradeScale <<policy>> {
+    +passingGrade(): int
+    +grades(int coursework, int finalExam): Grades
+    +passed(Grades): boolean
+  }
+  class SectionChoicePolicy <<policy>> {
+    +choose(List<Section>, capacityOf): Optional<Section>
+  }
+  interface SectionRepository {
+    +ofCourse(CourseCode): List<Section>
+    +usingClassroom(ClassroomRef): List<Section>
+    +usingProfessor(ProfessorId): List<Section>
+    +enrollmentsOf(StudentNumber): List<Enrollment>
+  }
 }
-note bottom of Coordinate : all() returns the 9 Coordinates\nin reading order.
 
-class Line <<value object>> {
-  +coordinates(): List<Coordinate>
-  +{static} row(n: int): Line
-  +{static} column(n: int): Line
-  +{static} diagonal(): Line
-  +{static} inverseDiagonal(): Line
-  +{static} all(): List<Line>
-}
-
-enum Color {
-  X
-  O
-  EMPTY
-}
-
-enum State {
-  X_TO_PUT
-  O_TO_PUT
-  X_WINS
-  O_WINS
-  DRAW
-  +isOver(): boolean
-}
-
-TicTacToe *-- "1" Board
-TicTacToe *-- "1" Round
-TicTacToe o-- "2" Player
-TicTacToe --> "1" State
-Round --> "2" Player : alternates
-Board *-- "9" Square
-Square o-- "0..1" Piece
-Square *-- "1" Coordinate
-Board ..> Line : hasWin checks\nthe 8 Lines
-Line o-- "3" Coordinate
-Player --> "1" Color
-Piece --> "1" Color
+User --> UserType
+User ..> StudentNumber : linked Student
+Session --> "0..1" User
+Permissions ..> Action
+Building *-- "0..*" Classroom
+Section *-- "0..*" Enrollment
+Section --> Period
+Section --> Day
+Section ..> CourseCode : course
+Section ..> ClassroomRef : classroom
+Section ..> ProfessorId : professor
+Enrollment --> Grades
+Enrollment ..> StudentNumber
+GradeScale ..> Grades
+SectionChoicePolicy ..> Section
 @enduml
