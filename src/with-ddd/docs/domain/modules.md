@@ -9,7 +9,7 @@ Version 1 has a single bounded context, **Game**, which is the core domain. The 
 | Package | Holds | May depend on |
 |---|---|---|
 | `tictactoe.domain` | TicTacToe, Board, Square, Coordinate, Line, Piece, Color, Player, Round, State | Only the JDK. It never reads input or prints output. |
-| `tictactoe.console` | Reading Coordinates, printing the Board and the result, following the console contract in `REQUIREMENTS.md` | `tictactoe.domain`, and only through `TicTacToe` and the value types it returns (`Coordinate`, `Color`, `State`, `Player`) |
+| `tictactoe.console` | Reading Coordinates, printing the Board and the result, writing the board log, following the console contract and the board log contract in `REQUIREMENTS.md` (the State translated as `game-states.md` says) | `tictactoe.domain`, and only through `TicTacToe` and the value types it returns (`Coordinate`, `Color`, `State`, `Player`) |
 | `tictactoe` | `Main`: wiring only. It creates the Players and the `TicTacToe`, and hands them to the console | Both |
 
 `src/test/java/tictactoe/ArchitectureTest.java` enforces that the domain does not depend on the console and does not use `System.out`, `System.err`, `System.in`, `Scanner` or `Console`.

@@ -29,7 +29,24 @@ Each phase is a new Bob session: F1 builds the game, F2 adds an opponent control
 | `runs/run-N/` | The history: earlier runs archived, with their `description.txt` and, if Bob compared them, their `CONCLUSIONS.md` |
 | `runs/stats.md`, `stats.json`, `history.csv` | The statistics of every run and one row per run, phase and folder for a spreadsheet |
 | `FAILURES.md`, `failures.json` | The observed failures, their cause and their evidence; `failures.json` is the summary the presentation uses |
+| `FINDINGS.md` | What Tic-Tac-Toe can and cannot tell about DDD, and the lessons for a harder problem |
 | `conclusion.txt` | The verdict in one sentence, shown on the conclusion slide |
+
+## A run, step by step
+
+```bash
+scripts/init.sh                      # first time only: checks everything and creates the folders
+# F1, F2 and F3, one after the other:
+#   bob in ../without-ddd and in ../with-ddd at the same time, a new session each, the phase prompt as is
+python3 measure.py snapshot F<n>     # when both sessions have finished
+python3 measure.py audit             # every session must be OK
+# after F3:
+python3 measure.py                   # measure the three phases
+#   optional: bob in this repository, "run COMPARE.md"; python3 presentation.py
+scripts/new_run.sh "what with-ddd received in this run"   # archive in runs/run-N and reset for the next run
+```
+
+The sections below explain each step.
 
 ## Requirements
 
@@ -59,8 +76,9 @@ This repository is the **control plane**: it holds the starting points, the prom
 
 ## Each phase (F1, F2 and F3)
 
-1. **One terminal per folder.** Open a terminal in `../without-ddd` and another in `../with-ddd`, run `bob` in each one and send the content of `prompts/F<n>-….md` unchanged. Each phase is a new session: do not continue the previous one.
-2. **Wait for both to finish.** Bob works without asking, leaves the code building and writes its history in `history/`.
+1. **One terminal per folder.** Open a terminal in `../without-ddd` and another in `../with-ddd`, run `bob` in each one and send the content of `prompts/F<n>-….md` unchanged. Each phase is a new session: do not continue the previous one and never use `bob --resume` (Bob Shell prints that command at the end of each session; it is only a way to continue it).
+   Run both folders **at the same time**, side by side, in every run: both sessions then share the same conditions (model load, network, machine). Running them one after the other changes how long each one takes, so do not mix both ways inside a series; if you want to try it, note it in the run description.
+2. **Wait for both to finish.** Bob works without asking, leaves the code building and writes its history in `history/`. If a session stops waiting for you to approve a command, do not approve it: the permissions in `config/bob-settings.json` are missing something. Note the command, fix the configuration and repeat the run.
 3. **Take the snapshot** from this repository:
    ```bash
    python3 measure.py snapshot F<n>
@@ -70,7 +88,11 @@ This repository is the **control plane**: it holds the starting points, the prom
    ```bash
    python3 measure.py audit
    ```
-   If a session comes out `INVALID`, repeat the experiment from `reset`.
+   It only shows the sessions since the last `reset` (`ALL=1` shows every session). If a session comes out `INVALID`, the run is not valid: discard it without archiving it and start again from F1 in both folders:
+   ```bash
+   rm -rf results/without-ddd results/with-ddd results/metrics.* results/summary.md results/presentation.pptx
+   python3 measure.py reset
+   ```
 5. **Measure** (it takes one or two minutes per snapshot, mostly because of the mutation testing):
    ```bash
    python3 measure.py
@@ -94,13 +116,15 @@ Since **series 2**, `REQUIREMENTS.md` asks for a log: when the variable `TICTACT
 
 This way accuracy does not depend on the console format: `measure.py` plays each hidden game with the log on and counts it as correct if it starts empty, if each line is a valid put or move by the player whose turn it is, and if the final board and state are the expected ones. The console is still measured separately, because it is what the user sees. The F3 prompt reminds that moves are logged too.
 
-The **series** (the `SERIES` constant in `measure.py`) goes up every time the requirements, the prompts or the scenarios change. `reset` records it and the stats only combine runs of the same series. Series 1 is the runs without a log.
+The **series** (the `SERIES` constant in `measure.py`) goes up every time anything in `src/` (requirements, docs, rules), the prompts or the scenarios change. Change them only between runs, never in the middle of one, and if the series already has archived runs, raise `SERIES` before the next `reset`. `reset` records it and the stats only combine runs of the same series. Series 1 is the runs without a log.
 
 ## Several runs
 
 One run alone is an anecdote; what repeats across runs is a signal.
 
 `scripts/new_run.sh ["description"]` does steps 1 and 2 in one go: it asks for confirmation first, measures the run if needed, archives it and resets the folders. It never touches `src/`.
+
+Compare it with Bob (`run COMPARE.md`) before archiving if you want its `CONCLUSIONS.md`: `archive` moves `results/` as it is.
 
 1. **Measure and archive the current run:**
    ```bash
@@ -118,9 +142,9 @@ If you forget to take a snapshot between phases, the code of that phase is overw
 
 ## Rules for valid data
 
-- **Same starting point.** Both folders share `REQUIREMENTS.md`, `pom.xml` (with-ddd adds ArchUnit) and the rules in `.bob/rules/`: work without asking, do not leave the folder, do not use git or the network, and write the history.
+- **Same starting point.** Both folders share `REQUIREMENTS.md`, `pom.xml` (with-ddd adds ArchUnit) and the rules in `.bob/rules/`: work without asking, do not leave the folder (temporary files go in `target/`), read files only with Bob's file tools, do not use git or the network, keep no memory for later sessions, and write the history.
 - **Same prompts, no help.** Send each prompt as is. Do not answer Bob's questions or correct its work during a phase.
-- **New sessions, without memory.** One new session per phase and per folder. The history leaves the folder with `snapshot`, so the next session only sees the code and, in with-ddd, the documentation.
+- **New sessions, without memory.** One new session per phase and per folder, never `bob --resume`. The history leaves the folder with `snapshot`, so the next session only sees the code and, in with-ddd, the documentation.
 - **Isolation.** Each folder works alone; `audit` checks it session by session.
 - **External measurement.** The hidden games, the mutants, coupling, cohesion and cost are measured by `measure.py`, not by Bob. The decisions and pending items are Bob's own account: they are used to see which questions the documentation left open.
 
@@ -128,7 +152,7 @@ If you forget to take a snapshot between phases, the code of that phase is overw
 
 | Group | Metrics |
 |---|---|
-| Accuracy | Hidden games from `scenarios.tsv` with the regressions of earlier phases, checked in two ways: the board's **JSONL log** (the state of the game, move by move) and the **console** (what the user sees: the exact output, the logic even if the format fails, and whether it shows the same board as the log). Unit tests and mutation score (total and without the console) |
+| Accuracy | Hidden games from `scenarios.tsv` with the regressions of earlier phases, checked in two ways: the board's **JSONL log** (the state of the game, move by move) and the **console** (what the user sees: the exact output, the logic even if the format fails, and whether it shows the same board as the log). Unit tests and mutation score (total and without the console). **Bob's tests against the hidden games**: share of tests that pass, whether the suite's verdict agrees with the hidden games, escapes (hidden games that fail with the suite green) and false alarms (failing tests with every hidden game correct) |
 | Agent cost | Cost, max context, duration, model calls and builds, from `bob.db` |
 | How Bob worked | Docs and code files read before the first edit and in the whole session; whether it edited the docs before the code |
 | Size | Classes, packages and lines; lines per file (median, max, files with more than 200); lines per method (methods with more than 30) and methods with more than 3 parameters |
@@ -137,7 +161,7 @@ If you forget to take a snapshot between phases, the code of that phase is overw
 | Design | Encapsulation; classes with console input and output |
 | Efficiency and scalability | Bobcoins and seconds per correct hidden game (also with the correct logic); Bobcoins per 100 lines touched in F2 and F3; how propagation cost, coupling and cohesion change from F1 to F3 |
 | Change (F2 and F3) | New, modified and deleted classes; Open/Closed ratio; lines changed in existing classes; existing tests touched; docs updated |
-| Autonomy | Decisions Bob made alone, by type, with the question it would have asked; pending items |
+| Autonomy | Measured in `bob.db`: human messages after the prompt, questions to the user, approvals rejected, denied commands it tried and sessions that ended in an error. Declared in the history: decisions Bob made alone, by type, with the question it would have asked; pending items; the result (done, partially, blocked) |
 | Language | Discarded glossary terms that appear in the code and glossary terms present |
 
 ## Hypotheses

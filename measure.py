@@ -108,11 +108,19 @@ def audit():
             shutil.copy(f, tmp)
         con = sqlite3.connect(Path(tmp) / "bob.db")
         invalid = 0
+        reset_file = RESULTS / "reset.json"
+        since = json.loads(reset_file.read_text()).get("reset_ms", 0) if reset_file.exists() else 0
+        if since:
+            print(f"Sessions since the last reset ({datetime.fromtimestamp(since / 1000):%Y-%m-%d %H:%M}); ALL=1 shows every session.\n")
+        if os.environ.get("ALL"):
+            since = 0
         for c in FOLDERS:
             folder = str(WORKSPACE / c)
             tasks = con.execute("select id, substr(title, 1, 40), created_at from tasks where project_id in (?, ?) order by created_at",
                                 (folder, "file:" + folder)).fetchall()
             for tid, title, created in tasks:
+                if (created if created > 1e12 else created * 1000) < since:
+                    continue
                 outside, forbidden = set(), set()
                 for (data,) in con.execute("select data from messages where task_id = ? and role = 'assistant'", (tid,)):
                     for path in re.findall(r"(/(?:Users|home|private|tmp|var)/[^\s\"'\\,)]+|\.\./[^\s\"'\\,)]+)", data):
@@ -191,7 +199,10 @@ def bob_session(con, c, phase):
     reads = defaultdict(int)
     before = defaultdict(int)
     edited, first, doc_edits, code_edits, docs_first = False, None, 0, 0, None
+    # Autonomy, measured from what happened and not from what Bob declares in its history.
+    auto = {"human_messages": 0, "questions_to_user": 0, "denied_commands": 0, "approvals_rejected": 0, "session_errors": 0}
     for (tid,) in tasks:
+        users, last = 0, None
         for (data,) in con.execute("select data from messages where task_id = ? order by created_at", (tid,)):
             try:
                 m = json.loads(data)
@@ -200,8 +211,22 @@ def bob_session(con, c, phase):
             meta = m.get("_meta") or {}
             if meta.get("timestamp"):
                 times.append(meta["timestamp"])
-            if m.get("role") != "assistant":
+            role = m.get("role")
+            if role == "user":
+                users += 1
+                # The first message is the prompt; in series 1 the cost line was pasted by hand at the end (protocol, not help).
+                if users > 1 and not re.search(r"track (the )?(token|consum)", _text(m.get("content")), re.I):
+                    auto["human_messages"] += 1
+            elif role == "tool":
+                out = _text(m.get("content"))
+                if "deny list" in out:
+                    auto["denied_commands"] += 1
+                elif re.search(r"was cancelled|denied by the user|rejected by the user|user rejected", out, re.I):
+                    auto["approvals_rejected"] += 1
+            if role != "assistant":
                 continue
+            last = m
+            auto["questions_to_user"] += sum(1 for x in m.get("toolCalls") or [] if re.search(r"ask|question|followup", x.get("name") or "", re.I))
             sp = meta.get("spend") or {}
             cost += sp.get("cost", 0) or 0
             ctx = max(ctx, sp.get("contextTokens", 0) or 0)
@@ -225,13 +250,55 @@ def bob_session(con, c, phase):
                         docs_first = k == "docs"
                 elif name == "execute_command" and re.search(r"\bmvn\b", str(args.get("command", ""))):
                     builds += 1
+        # A session that ends on a question, with no tool call, stopped to ask instead of finishing.
+        if last and not last.get("toolCalls") and _text(last.get("content")).rstrip().endswith("?"):
+            auto["questions_to_user"] += 1
+        status = con.execute("select status, last_error from tasks where id = ?", (tid,)).fetchone()
+        auto["session_errors"] += bool(status and (status[0] == "error" or (status[1] not in (None, "", "null"))))
+    auto["interventions"] = auto["human_messages"] + auto["approvals_rejected"]
     return {"bob_sessions": len(tasks), "cost_bob": round(cost, 2), "context_max_k": round(ctx / 1000, 1),
             "bob_duration_s": int((max(times) - min(times)) / 1000) if times else None,
             "model_calls": calls, "mvn_builds": builds,
             "reads_docs": reads["docs"], "reads_code": reads["code"], "reads_tests": reads["tests"],
             "docs_read_before_edit": before["docs"], "code_read_before_edit": before["code"] + before["tests"],
             "first_edit": first, "doc_edits": doc_edits, "code_edits": code_edits,
-            "docs_before_code": docs_first}
+            "docs_before_code": docs_first, **auto}
+
+
+def _text(content):
+    """The text of a message whose content is a string or a list of parts."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "\n".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in content)
+    return ""
+
+
+# ---------------------------------------------------------------- Bob's tests against the hidden games
+def test_accuracy(r):
+    """Bob writes its own tests, so they are judged against the hidden games (the oracle): the log from series 2,
+    the console logic before. The suite is right when it is green and every hidden game is correct, or when it
+    is red and some game fails. Escapes: hidden games that fail while the suite is green. False alarms: failing
+    tests when every hidden game is correct. Recall against planted bugs is the mutation score."""
+    tests, failed = r.get("tests"), r.get("tests_failed")
+    oracle = r.get("acceptance_log") or r.get("acceptance_logic")
+    out = {"tests_passed_pct": round(100 * (tests - failed) / tests, 1) if tests else None}
+    m = re.fullmatch(r"(\d+)/(\d+)", oracle or "")
+    if not tests or not m:
+        return out
+    ok, total = int(m.group(1)), int(m.group(2))
+    green, hidden_failed = failed == 0, total - ok
+    out.update({
+        "tests_oracle": "log" if r.get("acceptance_log") else "console logic",
+        "suite_verdict": ("right: green and every hidden game correct" if green and not hidden_failed else
+                          "false confidence: green but hidden games fail" if green else
+                          "right: red and hidden games fail" if hidden_failed else
+                          "false alarm: red but every hidden game correct"),
+        "suite_right": green == (hidden_failed == 0),
+        "test_escapes": hidden_failed if green else None,
+        "false_alarms": failed if not hidden_failed else None,
+    })
+    return out
 
 
 # ---------------------------------------------------------------- reset
@@ -289,6 +356,8 @@ def history(snap, prev):
     r["pending"] = len(re.findall(r"^\|\s*P\d+\s*\|", t, re.M))
     res = re.search(r"## Result\s*\n+(.+)", t)
     r["result"] = res.group(1).strip()[:80] if res else "?"
+    status = re.match(r"`?(done|partially done|partially|blocked)", r["result"], re.I)
+    r["result_status"] = status.group(1).lower().replace("partially done", "partially") if status else "?"
     docs = re.search(r"## Documentation I relied on\s*\n(.*?)(\n## |\Z)", t, re.S)
     r["docs_used"] = len(re.findall(r"^- ", docs.group(1), re.M)) if docs else 0
     return r
@@ -636,6 +705,10 @@ ROWS = [
     ("Console: games with the exact output (hidden scenarios)", "acceptance"), ("Console: correct logic even if the format fails", "acceptance_logic"),
     ("Acceptance F1 (regressions)", "acceptance_F1"),
     ("Acceptance F2", "acceptance_F2"), ("Acceptance F3", "acceptance_F3"), ("Failed scenarios", "acceptance_failures"),
+    ("Bob's tests that pass (%)", "tests_passed_pct"),
+    ("Bob's tests against the hidden games: verdict of the suite", "suite_verdict"),
+    ("Bob's tests: escapes (hidden games that fail with the suite green)", "test_escapes"),
+    ("Bob's tests: false alarms (failing tests with every hidden game correct)", "false_alarms"),
     ("Total mutation score (%)", "mutation_score"), ("Mutants killed/generated", "mutants"),
     ("Mutation score without the console (%)", "mutation_score_no_io"), ("Mutants without the console", "mutants_no_io"),
     ("Production classes", "classes"), ("Packages", "packages"), ("Production lines", "loc_main"),
@@ -674,7 +747,13 @@ ROWS = [
     ("Existing tests touched", "existing_tests_touched"), ("docs/domain updated", "docs_domain_updated"),
     ("Did Bob modify REQUIREMENTS.md?", "requirements_modified"), ("Snapshot rebuilt from bob.db", "snapshot_rebuilt"),
     ("Own decisions (total)", "decisions"), *[(f"  · {t}", f"dec_{t}") for t in TYPES],
-    ("Pending items", "pending"), ("Documents it relied on", "docs_used"),
+    ("Pending items", "pending"), ("Result Bob declared", "result_status"),
+    ("Autonomy: human messages after the prompt", "human_messages"),
+    ("Autonomy: questions to the user", "questions_to_user"),
+    ("Autonomy: approvals rejected by a human", "approvals_rejected"),
+    ("Autonomy: denied commands it tried", "denied_commands"),
+    ("Autonomy: sessions that ended in an error", "session_errors"),
+    ("Documents it relied on", "docs_used"),
     ("Discarded terms in the code", "discarded_terms"), ("Glossary terms present", "model_terms"),
 ]
 
@@ -741,6 +820,7 @@ def measure():
                 r["ocp"] = f"{r['new_classes']} / {r['modified_classes']} / {r['deleted_classes']}"
                 r.update(docs_changed(prev, snap))
             r.update(efficiency(r))
+            r.update(test_accuracy(r))
             r["series"] = series
             data.setdefault(c, {})[phase] = r
     if not data:
@@ -818,6 +898,9 @@ SCOREBOARD = [
     ("The console shows the same board as the log", "console_matches_log", "max"),
     ("F1 regressions", lambda r: r.get("acceptance_F1"), "max"),
     ("Mutation score without the console (%)", "mutation_score_no_io", "max"),
+    ("Bob's tests that pass (%)", "tests_passed_pct", "max"),
+    ("Bob's suite agrees with the hidden games", lambda r: None if "suite_right" not in r else ("yes" if r["suite_right"] else "no"), None),
+    ("Escapes: hidden games that fail with the suite green", "test_escapes", "min"),
     ("Agent cost", None, None),
     ("Time (s)", "duration_s", "min"),
     ("Context at the end (k tokens)", "context_k", "min"),
@@ -832,6 +915,10 @@ SCOREBOARD = [
     ("Code reads in the whole session", "reads_code", "min"),
     ("Model calls", "model_calls", "min"),
     ("Autonomy", None, None),
+    ("Human interventions (messages and rejected approvals)", "interventions", "min"),
+    ("Questions to the user", "questions_to_user", "min"),
+    ("Denied commands it tried", "denied_commands", "min"),
+    ("Result Bob declared", "result_status", None),
     ("Own decisions", "decisions", "min"),
     ("  · because of gaps or ambiguities in the documentation", lambda r: r.get("dec_gap", 0) + r.get("dec_ambiguity", 0) if "decisions" in r else None, "min"),
     ("Design", None, None),
@@ -1047,7 +1134,10 @@ def archive(description=None):
     target = RUNS / f"run-{n}"
     shutil.move(str(RESULTS), target)
     RESULTS.mkdir()
-    print(f"run archived in {_rel(target)}; results/ is empty for the next one")
+    conclusions = ROOT / "CONCLUSIONS.md"  # COMPARE.md writes it at the root; it belongs to this run
+    if conclusions.exists():
+        shutil.move(str(conclusions), target / "CONCLUSIONS.md")
+    print(f"run archived in {_rel(target)}{' with CONCLUSIONS.md' if conclusions.exists() is False and (target / 'CONCLUSIONS.md').exists() else ''}; results/ is empty for the next one")
     import stats
     stats.main()
 

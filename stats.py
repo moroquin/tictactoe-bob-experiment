@@ -39,6 +39,9 @@ METRICS = [
     ("Console: with the correct logic (%)", "acceptance_logic", "max"),
     ("Console: shows the same board as the log (%)", "console_matches_log", "max"),
     ("Mutation score without the console (%)", "mutation_score_no_io", "max"),
+    ("Bob's tests that pass (%)", "tests_passed_pct", "max"),
+    ("Bob's suite agrees with the hidden games (%)", "suite_right", "max"),
+    ("Escapes: hidden games failing with the suite green", "test_escapes", "min"),
     ("Cost and efficiency", None, None),
     ("Bobcoins", "cost_bobcoins", "min"),
     ("Time (s)", "duration_s", "min"),
@@ -50,6 +53,9 @@ METRICS = [
     ("Bobcoins per correct game according to the log", "cost_per_game_log", "min"),
     ("How Bob worked", None, None),
     ("Code read before editing", "code_read_before_edit", "min"),
+    ("Human interventions", "interventions", "min"),
+    ("Questions to the user", "questions_to_user", "min"),
+    ("Denied commands it tried", "denied_commands", "min"),
     ("Own decisions", "decisions", "min"),
     ("  · gaps or ambiguities", lambda r: (r.get("dec_gap", 0) + r.get("dec_ambiguity", 0)) if "decisions" in r else None, "min"),
     ("Size", None, None),
@@ -88,8 +94,8 @@ OUTCOME = [("Correct according to the log %", "acceptance_log"), ("Exact console
 
 def num(v):
     """'11/12' -> 91.7 (%), numbers -> float, lists -> length; None when it cannot."""
-    if isinstance(v, bool):
-        return float(v)
+    if isinstance(v, bool):  # yes/no as a percentage, so that the median across runs reads as "% of runs"
+        return 100.0 * v
     if isinstance(v, (int, float)):
         return float(v)
     if isinstance(v, list):

@@ -20,5 +20,6 @@ Use these names in code, tests and docs. A discarded term in the code is a bug. 
 | Inverse Diagonal | The Line (1,3)–(2,2)–(3,1). | `Line.inverseDiagonal()` | AntiDiagonal, SecondaryDiagonal |
 | Win | Three Pieces of the same Color on one Line. | `Board.hasWin(Color)`, `State.X_WINS`, `State.O_WINS` | Victory, Goal |
 | Draw | All 9 Squares are occupied and there is no Win. | `State.DRAW` | Tie |
-| State | Where a game is: X to put, O to put, X wins, O wins or Draw. See `game-states.md`. | `State.X_TO_PUT`, `State.O_TO_PUT`, `State.X_WINS`, `State.O_WINS`, `State.DRAW` | Status, Outcome, Phase |
+| State | Where a game is: X to put, O to put, X wins, O wins or Draw. See `game-states.md`. The board log writes it with the names of `REQUIREMENTS.md` (`IN_PROGRESS` while the game goes on): the table is in `game-states.md`. | `State.X_TO_PUT`, `State.O_TO_PUT`, `State.X_WINS`, `State.O_WINS`, `State.DRAW` | Status, Outcome, Phase |
+| Board log | The JSON Lines file that `REQUIREMENTS.md` asks for when `TICTACTOE_BOARD_LOG` is set: the Board and the State after each change. It is output, so `tictactoe.console` writes it, with the State translated as `game-states.md` says. | — | — |
 | Move | Reserved: moving a Piece that is already on the Board. It is not part of version 1, so never use it for a Put. | — | — |

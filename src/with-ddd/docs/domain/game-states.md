@@ -16,3 +16,16 @@ The State of a game is `State` in the code. `TicTacToe.state()` returns it, and 
 O never fills the Board: with 9 Squares, the ninth Put is always X's.
 
 Invalid input (I9) never reaches the domain: the console rejects it and the State does not change.
+
+## The State in the board log
+
+The board log of `REQUIREMENTS.md` is an output contract, like the console, so it uses the contract's names and not the domain's. `tictactoe.console` writes it and translates the State; the domain does not change and does not know the log exists.
+
+| `State` in the domain | `"state"` in the board log |
+|---|---|
+| `X_TO_PUT`, `O_TO_PUT` | `"IN_PROGRESS"` |
+| `X_WINS` | `"X_WINS"` |
+| `O_WINS` | `"O_WINS"` |
+| `DRAW` | `"DRAW"` |
+
+Any State in which the game goes on, including those a change request adds, is `"IN_PROGRESS"` in the log. Never write the name of a domain State such as `X_TO_PUT` in the log.

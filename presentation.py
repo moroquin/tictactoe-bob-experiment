@@ -304,6 +304,7 @@ PHASE_ROWS = [
     ("  · with the correct logic", "acceptance_logic", "max"),
     ("Console = log", "console_matches_log", "max"),
     ("Mutation score without console (%)", "mutation_score_no_io", "max"),
+    ("Escapes (hidden games failing, suite green)", "test_escapes", "min"),
     ("Cost", "cost_bobcoins", "min"),
     ("Max context (k tokens)", "context_k", "min"),
     ("Duration (s)", "duration_s", "min"),
@@ -321,6 +322,7 @@ PHASE_ROWS = [
     ("Existing classes modified", "modified_classes", "min"),
     ("Lines changed in existing", "lines_changed_in_existing", "min"),
     ("Bobcoins per 100 lines touched", "cost_per_100_lines_touched", "min"),
+    ("Human interventions · questions", lambda r: None if _v(r, "interventions") is None else f"{_v(r, 'interventions')} · {_v(r, 'questions_to_user')}", None),
     ("Doc gaps (gap + ambiguity)", lambda r: None if _v(r, "decisions") is None else (_v(r, "dec_gap") or 0) + (_v(r, "dec_ambiguity") or 0), "min"),
     ("Discarded terms", "discarded_terms", "min"),
 ]

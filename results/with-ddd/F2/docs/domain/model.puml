@@ -1,0 +1,118 @@
+@startuml
+' Domain model, version 2. CR-1 adds HumanPlayer, PcPlayer, CoordinateSupplier.
+' decisions D5 to D8 and D16 to D19 in decisions.md explain every difference.
+' Members marked ~ are package-private: only classes in tictactoe.domain call them.
+title Tic-Tac-Toe — domain model (version 2)
+
+class TicTacToe <<aggregate root>> {
+  +TicTacToe(playerX: Player, playerO: Player)
+  +put(coordinate: Coordinate): boolean
+  +state(): State
+  +currentPlayer(): Player
+  +colorAt(coordinate: Coordinate): Color
+}
+note right of TicTacToe
+  put() returns false and changes nothing
+  when the Square is occupied (I3).
+  It is the only public operation that
+  changes a game (I10).
+end note
+
+class Board {
+  +colorAt(coordinate: Coordinate): Color
+  +isEmpty(coordinate: Coordinate): boolean
+  +isFull(): boolean
+  +hasWin(color: Color): boolean
+  ~put(coordinate: Coordinate, piece: Piece)
+}
+
+class Square {
+  +coordinate(): Coordinate
+  +color(): Color
+  +isEmpty(): boolean
+  ~put(piece: Piece)
+}
+
+class Round {
+  +current(): Player
+  ~next()
+}
+
+abstract class Player {
+  +color(): Color
+  +{abstract} chooseCoordinate(game: TicTacToe): Coordinate
+}
+
+class HumanPlayer {
+  +HumanPlayer(color: Color, supplier: CoordinateSupplier)
+  +color(): Color
+  +chooseCoordinate(game: TicTacToe): Coordinate
+}
+
+class PcPlayer {
+  +PcPlayer(color: Color)
+  +color(): Color
+  +chooseCoordinate(game: TicTacToe): Coordinate
+}
+note right of PcPlayer
+  Rules in order: Win, Block,
+  Center (2,2), Corner (1,1)(1,3)(3,1)(3,3),
+  first empty in reading order.
+  Ties broken by reading order.
+end note
+
+interface CoordinateSupplier {
+  +get(game: TicTacToe): Coordinate
+}
+
+class Piece {
+  +color(): Color
+}
+
+class Coordinate <<value object>> {
+  +row(): int
+  +column(): int
+  +{static} all(): List<Coordinate>
+}
+note bottom of Coordinate : all() returns the 9 Coordinates\nin reading order.
+
+class Line <<value object>> {
+  +coordinates(): List<Coordinate>
+  +{static} row(n: int): Line
+  +{static} column(n: int): Line
+  +{static} diagonal(): Line
+  +{static} inverseDiagonal(): Line
+  +{static} all(): List<Line>
+}
+
+enum Color {
+  X
+  O
+  EMPTY
+}
+
+enum State {
+  X_TO_PUT
+  O_TO_PUT
+  X_WINS
+  O_WINS
+  DRAW
+  +isOver(): boolean
+}
+
+TicTacToe *-- "1" Board
+TicTacToe *-- "1" Round
+TicTacToe o-- "2" Player
+TicTacToe --> "1" State
+Round --> "2" Player : alternates
+Board *-- "9" Square
+Square o-- "0..1" Piece
+Square *-- "1" Coordinate
+Board ..> Line : hasWin checks\nthe 8 Lines
+Line o-- "3" Coordinate
+Player --> "1" Color
+Player <|-- HumanPlayer
+Player <|-- PcPlayer
+HumanPlayer --> CoordinateSupplier
+Piece --> "1" Color
+@enduml
