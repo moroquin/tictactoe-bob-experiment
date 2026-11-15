@@ -38,7 +38,7 @@ The domain is invented, so the model cannot replace the documentation with what 
 | `stats.py` | Statistics of every run: medians, paired differences, sign test and correlations (`python3 measure.py stats`) |
 | `COMPARE.md` | The prompt Bob uses to compare both folders and write `CONCLUSIONS.md` |
 | `presentation.py` | Generates `results/presentation.pptx` with the rules, the metrics, the model and the results of each phase |
-| `scripts/init.sh`, `scripts/new_run.sh` | Setup checks and the first reset; archive the current run and start a new one |
+| `scripts/init.sh`, `scripts/new_run.sh`, `scripts/clean.sh` | Setup checks and the first reset; archive the current run and start a new one; delete every run (results/, runs/, CONCLUSIONS.md, the experiment folders) and start from zero |
 | `Execute.md` | One run, command by command |
 | `config/bob-settings.json` | Recommended permissions for Bob during the experiment |
 | `.bob/rules/` | Bob's rules in this repository, for the comparing session |

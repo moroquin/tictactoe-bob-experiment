@@ -2,6 +2,7 @@
 
 ```bash
 scripts/init.sh                          # first time only; later runs: scripts/new_run.sh "description" -y
+scripts/clean.sh                         # or: delete every run and start a completely clean experiment
 ```
 
 For each phase, F1 to F7, in order:
